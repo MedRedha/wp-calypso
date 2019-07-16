@@ -127,7 +127,6 @@ export default {
 		localeTargets: 'any',
 	},
 	proratedCreditsBanner: {
-		//this test is used to dial down the upsell offer
 		datestamp: '20190626',
 		variations: {
 			control: 50,
