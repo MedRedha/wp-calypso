@@ -145,4 +145,14 @@ export default {
 		defaultVariation: 'notSkippable',
 		allowExistingUsers: true,
 	},
+	checkoutGuarantee: {
+		datestamp: '20190613',
+		variations: {
+			variantShowGuarantee: 50,
+			control: 50,
+		},
+		defaultVariation: 'control',
+		allowExistingUsers: true,
+		//localeTargets: 'any',
+	},
 };

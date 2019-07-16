@@ -39,6 +39,8 @@ import { INPUT_VALIDATION, REDIRECTING_FOR_AUTHORIZATION } from 'lib/store-trans
 import { getTld } from 'lib/domains';
 import { displayError, clear } from 'lib/upgrades/notices';
 import { removeNestedProperties } from 'lib/cart/store/cart-analytics';
+import { hasOnlyDomainProducts } from 'lib/cart-values/cart-items';
+import { abtest } from 'lib/abtest';
 
 /**
  * Module variables
@@ -547,7 +549,12 @@ export class SecurePaymentForm extends Component {
 	}
 
 	render() {
-		const visiblePaymentBox = this.getVisiblePaymentBox( this.props );
+		const visiblePaymentBox = this.getVisiblePaymentBox( this.props ),
+			moneyBackGuarantee =
+				! hasOnlyDomainProducts( this.props.cart ) &&
+				'variantShowGuarantee' === abtest( 'checkoutGuarantee' );
+
+		this.props.showGuaranteeSeal( moneyBackGuarantee );
 		if ( visiblePaymentBox === null ) {
 			debug( 'empty content' );
 			return (
