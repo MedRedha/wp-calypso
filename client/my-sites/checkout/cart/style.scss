@@ -445,6 +445,8 @@ div.popover-cart__popover {
 
 .guarantee-seal {
 
+	text-align: center;
+
 	img {
 		width: 40%;
 		transform: rotate( 15deg );
@@ -452,7 +454,6 @@ div.popover-cart__popover {
 
 	@include breakpoint( '<660px' ) {
 		margin: 20px auto;
-		text-align: center;
 
 		img {
 			width: 30%;
