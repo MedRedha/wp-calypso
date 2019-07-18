@@ -134,4 +134,12 @@ export default {
 		defaultVariation: 'yearlyPlan',
 		allowExistingUsers: true,
 	},
+	createAccountUserStep: {
+		datestamp: '20190717',
+		variations: {
+			createAccount: 50,
+			user: 50,
+		},
+		defaultVariation: 'user',
+	},
 };

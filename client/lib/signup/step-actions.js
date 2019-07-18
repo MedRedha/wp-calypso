@@ -716,6 +716,29 @@ export function isSiteTopicFulfilled( stepName, defaultDependencies, nextProps )
 	}
 }
 
+/**
+ * Creates a user account and logs them in with an email only.
+ * Returns the dependencies for the step.
+ *
+ * @param {function} callback The username to get suggestions for.
+ * @param {object}   data     POST data object
+ */
+export function onboardPasswordlessUser( callback, data ) {
+	const { email } = data;
+
+	wpcom.undocumented().usersEmailOnboard( { email }, function( error, response ) {
+		if ( error ) {
+			callback( error );
+			return;
+		}
+		const providedDependencies = assign(
+			{},
+			{ email, username: response.username, bearer_token: response.token.access_token }
+		);
+		callback( error, providedDependencies );
+	} );
+}
+
 export function createPasswordlessUser( callback, dependencies, data ) {
 	const { email } = data;
 

@@ -510,6 +510,13 @@ export function generateSteps( {
 			providesDependencies: [ 'bearer_token', 'email', 'username' ],
 			unstorableDependencies: [ 'bearer_token' ],
 		},
+
+		'create-account': {
+			stepName: 'passwordless',
+			providesToken: true,
+			providesDependencies: [ 'bearer_token', 'email', 'username' ],
+			unstorableDependencies: [ 'bearer_token' ],
+		},
 	};
 }
 
