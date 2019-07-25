@@ -512,7 +512,7 @@ export function generateSteps( {
 		},
 
 		'create-account': {
-			stepName: 'passwordless',
+			stepName: 'create-account',
 			providesToken: true,
 			providesDependencies: [ 'bearer_token', 'email', 'username' ],
 			unstorableDependencies: [ 'bearer_token' ],

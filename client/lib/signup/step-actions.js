@@ -733,7 +733,7 @@ export function onboardPasswordlessUser( callback, data ) {
 		}
 		const providedDependencies = assign(
 			{},
-			{ email, username: response.username, bearer_token: response.token.access_token }
+			{ email, username: response.username, bearer_token: response.bearer_token }
 		);
 		callback( error, providedDependencies );
 	} );
@@ -748,6 +748,7 @@ export function createPasswordlessUser( callback, dependencies, data ) {
 
 			return;
 		}
+
 		callback( error, response );
 	} );
 }
@@ -761,10 +762,12 @@ export function verifyPasswordlessUser( callback, dependencies, data ) {
 
 			return;
 		}
+
 		const providedDependencies = assign(
 			{},
-			{ email, username: email, bearer_token: response.token.access_token }
+			{ email, username: response.username, bearer_token: response.bearer_token }
 		);
+
 		callback( error, providedDependencies );
 	} );
 }
