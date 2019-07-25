@@ -5,11 +5,18 @@ import debugFactory from 'debug';
 
 const debug = debugFactory( 'calypso:signup:private-by-default' );
 
+interface PrivateByDefaultSiteSettings {
+	flowName?: string;
+}
+
 /**
  * Should the site be private by default
+ * @param siteSettings PrivateByDefaultSiteSettings
  * @returns `true` for private by default & `false` for not
  */
-export function shouldBePrivateByDefault( { flowName = '' }: { flowName?: string } = {} ): boolean {
+export function shouldBePrivateByDefault( {
+	flowName = '',
+}: PrivateByDefaultSiteSettings ): boolean {
 	if ( flowName.match( /^ecommerce/ ) ) {
 		// ecommerce plans go atomic after checkout. These sites should default to public for now.
 		return false;
