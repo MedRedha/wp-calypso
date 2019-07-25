@@ -5,9 +5,8 @@
  */
 
 import ReactDom from 'react-dom';
-import PropTypes from 'prop-types';
 import React from 'react';
-import { Provider as ReduxProvider } from 'react-redux';
+import { Provider as ReactReduxProvider, ReactReduxContext } from 'react-redux';
 
 /**
  * Internal dependencies
@@ -15,8 +14,12 @@ import { Provider as ReduxProvider } from 'react-redux';
 import { MomentProvider } from 'components/localized-moment/context';
 
 export default class RootChild extends React.Component {
-	static contextTypes = {
-		store: PropTypes.object,
+	reduxStore = null;
+
+	setReduxStore = contextValue => {
+		if ( contextValue ) {
+			this.reduxStore = contextValue.store;
+		}
 	};
 
 	componentDidMount() {
@@ -39,7 +42,7 @@ export default class RootChild extends React.Component {
 		delete this.container;
 	}
 
-	renderChildren = () => {
+	renderChildren() {
 		let content;
 
 		if ( this.props && ( Object.keys( this.props ).length > 1 || ! this.props.children ) ) {
@@ -50,18 +53,18 @@ export default class RootChild extends React.Component {
 
 		// Context is lost when creating a new render hierarchy, so ensure that
 		// we preserve the context that we care about
-		if ( this.context.store ) {
+		if ( this.reduxStore ) {
 			content = (
-				<ReduxProvider store={ this.context.store }>
+				<ReactReduxProvider store={ this.reduxStore }>
 					<MomentProvider>{ content }</MomentProvider>
-				</ReduxProvider>
+				</ReactReduxProvider>
 			);
 		}
 
 		ReactDom.render( content, this.container );
-	};
+	}
 
 	render() {
-		return null;
+		return <ReactReduxContext.Consumer>{ this.setReduxStore }</ReactReduxContext.Consumer>;
 	}
 }
