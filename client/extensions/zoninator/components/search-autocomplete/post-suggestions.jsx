@@ -4,7 +4,7 @@
  * External dependencies
  */
 
-import React, { PureComponent } from 'react';
+import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { find, map } from 'lodash';
@@ -17,7 +17,7 @@ import Suggestions from 'components/suggestions';
 import { getPostsForQuery } from 'state/posts/selectors';
 import { getSelectedSiteId } from 'state/ui/selectors';
 
-class PostSuggestions extends PureComponent {
+class PostSuggestions extends Component {
 	static propTypes = {
 		exclude: PropTypes.array,
 		posts: PropTypes.array.isRequired,
@@ -31,9 +31,9 @@ class PostSuggestions extends PureComponent {
 		search: '',
 	};
 
-	setSuggestions = ref => ( this.suggestionsRef = ref );
+	suggestionsRef = React.createRef();
 
-	handleKeyEvent = event => this.suggestionsRef.handleKeyEvent( event );
+	handleKeyEvent = event => this.suggestionsRef.current.handleKeyEvent( event );
 
 	suggest = ( { postId } ) => this.props.suggest( find( this.props.posts, { ID: postId } ) );
 
@@ -42,16 +42,15 @@ class PostSuggestions extends PureComponent {
 		const suggestions = map( posts, post => ( { label: post.title, postId: post.ID } ) );
 
 		return (
-			<div>
+			<Fragment>
 				<QueryPosts siteId={ siteId } query={ { search, exclude } } />
-
 				<Suggestions
-					ref={ this.setSuggestions }
+					ref={ this.suggestionsRef }
 					query={ search }
 					suggestions={ suggestions }
 					suggest={ this.suggest }
 				/>
-			</div>
+			</Fragment>
 		);
 	}
 }
@@ -69,7 +68,7 @@ const connectComponent = connect(
 	mapStateToProps,
 	null,
 	null,
-	{ withRef: true }
+	{ forwardRef: true }
 );
 
 export default connectComponent( PostSuggestions );
