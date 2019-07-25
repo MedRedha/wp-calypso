@@ -11,6 +11,7 @@ import Gridicon from 'gridicons';
 /**
  * Internal dependencies
  */
+import { getReduxStore } from 'lib/redux-bridge';
 import meta from './meta';
 import { getCurrentLayoutFocus } from 'state/ui/layout-focus/selectors';
 import { setLayoutFocus } from 'state/ui/layout-focus/actions';
@@ -35,14 +36,18 @@ function isFeaturedImageSet() {
 	return !! query( '.editor-featured-image.is-assigned' ).length;
 }
 
-function openSidebar( { reduxStore } ) {
+async function openSidebar() {
+	const reduxStore = await getReduxStore();
+
 	if ( getCurrentLayoutFocus( reduxStore.getState() ) !== 'sidebar' ) {
 		reduxStore.dispatch( setLayoutFocus( 'sidebar' ) );
 	}
 
-	return new Promise( function( resolve, reject ) {
-		getCurrentLayoutFocus( reduxStore.getState() ) === 'sidebar' ? delay( resolve, 200 ) : reject();
-	} );
+	if ( getCurrentLayoutFocus( reduxStore.getState() ) !== 'sidebar' ) {
+		throw new Error( 'Could not open sidebar' );
+	}
+
+	await new Promise( resolve => delay( resolve, 200 ) );
 }
 
 function openFeatureImageUploadDialog() {

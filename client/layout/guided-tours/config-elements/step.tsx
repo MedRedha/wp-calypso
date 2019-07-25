@@ -3,7 +3,7 @@
  */
 import React, { Component, CSSProperties, FunctionComponent } from 'react';
 import classNames from 'classnames';
-import { defer, get, isFunction } from 'lodash';
+import { defer, isFunction } from 'lodash';
 import debugFactory from 'debug';
 import { translate } from 'i18n-calypso';
 
@@ -97,7 +97,7 @@ export default class Step extends Component< Props, State > {
 	isUpdatingPosition: boolean = false;
 
 	componentWillMount() {
-		this.wait( this.props, this.context ).then( () => {
+		this.wait( this.props ).then( () => {
 			this.start();
 			this.setStepSection( this.context, { init: true } );
 			debug( 'Step#componentWillMount: stepSection:', this.stepSection );
@@ -110,7 +110,7 @@ export default class Step extends Component< Props, State > {
 
 	componentDidMount() {
 		this.mounted = true;
-		this.wait( this.props, this.context ).then( () => {
+		this.wait( this.props ).then( () => {
 			window.addEventListener( 'resize', this.onScrollOrResize );
 			this.watchTarget();
 		} );
@@ -121,7 +121,7 @@ export default class Step extends Component< Props, State > {
 
 	componentWillReceiveProps( nextProps: Props, nextContext ) {
 		const shouldScrollTo = nextProps.shouldScrollTo && this.props.name !== nextProps.name;
-		this.wait( nextProps, nextContext ).then( () => {
+		this.wait( nextProps ).then( () => {
 			this.setStepSection( nextContext );
 			this.quitIfInvalidRoute( nextProps, nextContext );
 			this.skipIfInvalidContext( nextProps, nextContext );
@@ -160,15 +160,10 @@ export default class Step extends Component< Props, State > {
 		start( { step, tour, tourVersion } );
 	}
 
-	wait( props: Props, context ) {
+	async wait( props: Props ) {
 		if ( isFunction( props.wait ) ) {
-			const ret = props.wait( { reduxStore: context.store } );
-			if ( isFunction( get( ret, 'then' ) ) ) {
-				return ret;
-			}
+			return props.wait();
 		}
-
-		return Promise.resolve();
 	}
 
 	safeSetState( state: State ) {

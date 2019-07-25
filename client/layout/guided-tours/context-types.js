@@ -22,9 +22,5 @@ export const childContextTypes = Object.freeze( {
 	lastAction: PropTypes.object,
 } );
 
-// Shape of context expected by the consumers: in addition to the context from the
-// `makeTour` context provider, they expect also `store` from Redux.
-export const contextTypes = Object.freeze( {
-	...childContextTypes,
-	store: PropTypes.object.isRequired,
-} );
+// Shape of context expected by the consumers
+export const contextTypes = childContextTypes;
