@@ -134,4 +134,13 @@ export default {
 		defaultVariation: 'yearlyPlan',
 		allowExistingUsers: true,
 	},
+	moveUserStepPosition: {
+		datestamp: '20190719',
+		variations: {
+			first: 50,
+			last: 50,
+		},
+		defaultVariation: 'first',
+		allowExistingUsers: true,
+	},
 };
