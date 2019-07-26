@@ -25,6 +25,7 @@ import { submitSignupStep } from 'state/signup/progress/actions';
 import { login } from 'lib/paths';
 import { getNextStepName, getPreviousStepName, getStepUrl } from 'signup/utils';
 import { onboardPasswordlessUser } from 'lib/signup/step-actions';
+import { recordTracksEvent } from 'state/analytics/actions';
 
 /**
  * Style dependencies
@@ -36,6 +37,7 @@ interface RequiredProps {
 	stepName: string;
 	positionInFlow: number;
 	submitCreateAccountStep: ( step: object, providedDependencies: object ) => void;
+	recordTracksEvent: ( event: string, properties: object ) => void;
 	goToNextStep: () => any;
 	signupProgress: {
 		lastKnownFlow: string;
@@ -72,6 +74,12 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 		errorMessages: null,
 	};
 
+	submitTracksEvent = ( isSuccessful, message ) =>
+		this.props.recordTracksEvent( 'calypso_signup_actions_onboarding_passwordless_login', {
+			is_successful: isSuccessful,
+			action_message: message,
+		} );
+
 	onFormSubmit = event => {
 		event.preventDefault();
 
@@ -80,7 +88,7 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 				errorMessages: [ this.props.translate( 'Please provide a valid email address.' ) ],
 				isSubmitting: false,
 			} );
-
+			this.submitTracksEvent( false, 'Please provide a valid email address.' );
 			return;
 		}
 
@@ -89,7 +97,7 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 		} );
 
 		onboardPasswordlessUser( this.onboardPasswordlessUserCallback, {
-			email: this.state.email,
+			email: typeof this.state.email === 'string' ? this.state.email.trim() : '',
 		} );
 	};
 
@@ -100,7 +108,7 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 				errorMessages: [ errorMessage ],
 				isSubmitting: false,
 			} );
-
+			this.submitTracksEvent( false, error.message );
 			return;
 		}
 
@@ -113,17 +121,16 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 	};
 
 	getErrorMessage( errorObj = { error: null, message: null } ) {
-		if ( ! errorObj.message || ! errorObj.error ) {
-			return null;
-		}
+		const { translate } = this.props;
+
 		switch ( errorObj.error ) {
 			case 'already_taken':
 			case 'already_active':
 				return (
 					<Fragment>
-						{ this.props.translate( 'An account with this email address already exists.' ) }
+						{ translate( 'An account with this email address already exists.' ) }
 						&nbsp;
-						{ this.props.translate( 'If this is you {{a}}log in now{{/a}}.', {
+						{ translate( 'If this is you {{a}}log in now{{/a}}.', {
 							components: {
 								a: (
 									<a
@@ -137,7 +144,12 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 					</Fragment>
 				);
 			default:
-				return errorObj.message;
+				return (
+					errorObj.message ||
+					translate(
+						'Sorry, something went wrong when trying to create your account. Please try again.'
+					)
+				);
 		}
 	}
 
@@ -151,7 +163,7 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 			},
 			providedDependencies
 		);
-
+		this.submitTracksEvent( true, 'Successful login' );
 		goToNextStep();
 	};
 
@@ -246,7 +258,7 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 							type="submit"
 							primary
 							busy={ isSubmitting }
-							disabled={ isSubmitting || ! email }
+							disabled={ isSubmitting || ! emailValidator.validate( email ) }
 						>
 							{ isSubmitting
 								? translate( 'Creating your account…' )
@@ -279,5 +291,8 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 
 export default connect(
 	null,
-	{ submitCreateAccountStep: submitSignupStep }
+	{
+		submitCreateAccountStep: submitSignupStep,
+		recordTracksEvent,
+	}
 )( localize( CreateAccount ) );
