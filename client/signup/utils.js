@@ -9,6 +9,7 @@ import { translate } from 'i18n-calypso';
 /**
  * Internal dependencies
  */
+import config from 'config';
 import { getLanguage } from 'lib/i18n-utils';
 import steps from 'signup/config/steps-pure';
 import flows from 'signup/config/flows';
@@ -224,3 +225,19 @@ export const clearSignupDestinationCookie = () => {
 
 	document.cookie = cookie.serialize( 'wpcom_signup_complete_destination', '', options );
 };
+
+export function getSocialServiceFromClientId( clientId ) {
+	if ( ! clientId ) {
+		return null;
+	}
+
+	if ( clientId === config( 'google_oauth_client_id' ) ) {
+		return 'google';
+	}
+
+	if ( clientId === config( 'facebook_app_id' ) ) {
+		return 'facebook';
+	}
+
+	return null;
+}

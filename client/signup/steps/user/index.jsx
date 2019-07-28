@@ -14,30 +14,19 @@ import { identity, includes, isEmpty, omit, get } from 'lodash';
 import { isCrowdsignalOAuth2Client, isWooOAuth2Client } from 'lib/oauth2-clients';
 import StepWrapper from 'signup/step-wrapper';
 import SignupForm from 'blocks/signup-form';
-import { getFlowSteps, getNextStepName, getPreviousStepName, getStepUrl } from 'signup/utils';
+import {
+	getFlowSteps,
+	getNextStepName,
+	getPreviousStepName,
+	getStepUrl,
+	getSocialServiceFromClientId,
+} from 'signup/utils';
 import { fetchOAuth2ClientData } from 'state/oauth2-clients/actions';
 import { getCurrentOAuth2Client } from 'state/ui/oauth2-clients/selectors';
 import { getSuggestedUsername } from 'state/signup/optional-dependencies/selectors';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { saveSignupStep, submitSignupStep } from 'state/signup/progress/actions';
 import { WPCC } from 'lib/url/support';
-import config from 'config';
-
-function getSocialServiceFromClientId( clientId ) {
-	if ( ! clientId ) {
-		return null;
-	}
-
-	if ( clientId === config( 'google_oauth_client_id' ) ) {
-		return 'google';
-	}
-
-	if ( clientId === config( 'facebook_app_id' ) ) {
-		return 'facebook';
-	}
-
-	return null;
-}
 
 export class UserStep extends Component {
 	static propTypes = {
