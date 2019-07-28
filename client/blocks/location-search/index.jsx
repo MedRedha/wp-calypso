@@ -13,6 +13,7 @@ import { getLocaleSlug } from 'i18n-calypso';
  * Internal dependencies
  */
 import SearchCard from 'components/search-card';
+import Search from 'components/search';
 import Prediction from './prediction';
 
 /**
@@ -26,10 +27,16 @@ class LocationSearch extends Component {
 	static propTypes = {
 		onPredictionClick: PropTypes.func,
 		predictionsTransformation: PropTypes.func,
+		types: PropTypes.arrayOf( PropTypes.string ),
+		hidePredictionsOnClick: PropTypes.bool,
+		card: PropTypes.bool,
 	};
 
 	static defaultProps = {
 		predictionsTransformation: predictions => predictions,
+		types: [ 'establishment' ],
+		hidePredictionsOnClick: false,
+		card: true,
 	};
 
 	state = {
@@ -68,10 +75,23 @@ class LocationSearch extends Component {
 
 		this.setState( { loading: true, query }, () => {
 			if ( query ) {
+				/*
+				 * https://developers.google.com/maps/documentation/javascript/places-autocomplete#session_tokens
+				 * // Create a new session token.
+					var sessionToken = new google.maps.places.AutocompleteSessionToken();
+
+					// Pass the token to the autocomplete service.
+					var autocompleteService = new google.maps.places.AutocompleteService();
+					autocompleteService.getPlacePredictions({
+					  input: 'pizza near Syd',
+					  sessionToken: sessionToken
+					},
+					displaySuggestions);
+				*/
 				autocompleteService.getPlacePredictions(
 					{
 						input: query,
-						types: [ 'establishment' ],
+						types: this.props.types,
 						language: getLocaleSlug(),
 					},
 					this.updatePredictions
@@ -82,31 +102,47 @@ class LocationSearch extends Component {
 		} );
 	};
 
-	renderPrediction = prediction => {
-		const { onPredictionClick } = this.props;
+	handlePredictionClick = prediction => {
+		if ( this.props.hidePredictionsOnClick ) {
+			this.setState( { predictions: [] } );
+		}
 
+		this.props.onPredictionClick( prediction );
+	};
+
+	renderPrediction = prediction => {
 		return (
 			<Prediction
 				key={ prediction.place_id }
-				onPredictionClick={ onPredictionClick }
+				onPredictionClick={ this.handlePredictionClick }
 				prediction={ prediction }
 			/>
 		);
 	};
 
+	renderSearchCard( searchProps ) {
+		return <SearchCard { ...searchProps } className="location-search__search-card is-compact" />;
+	}
+
+	renderSearch( searchProps ) {
+		return <Search { ...searchProps } />;
+	}
+
 	render() {
-		const { predictions, loading } = this.state;
+		const { predictions } = this.state;
+		const searchProps = {
+			onSearch: this.handleSearch,
+			delaySearch: true,
+			delayTimeout: 500,
+			disableAutocorrect: true,
+			searching: this.props.loading,
+		};
 
 		return (
 			<Fragment>
-				<SearchCard
-					onSearch={ this.handleSearch }
-					delaySearch={ true }
-					delayTimeout={ 500 }
-					disableAutocorrect={ true }
-					searching={ loading }
-					className="location-search__search-card is-compact"
-				/>
+				{ this.props.card
+					? this.renderSearchCard( searchProps )
+					: this.renderSearch( searchProps ) }
 
 				{ predictions && predictions.map( this.renderPrediction ) }
 			</Fragment>

@@ -10,14 +10,15 @@ import {
 	noop,
 	get,
 	deburr,
+	find,
 	kebabCase,
 	pick,
 	head,
+	includes,
 	isEqual,
 	isEmpty,
 	camelCase,
 	identity,
-	includes,
 } from 'lodash';
 import { localize } from 'i18n-calypso';
 
@@ -37,6 +38,7 @@ import { tryToGuessPostalCodeFormat } from 'lib/postal-code';
 import { toIcannFormat } from 'components/phone-input/phone-number';
 import NoticeErrorMessage from 'my-sites/checkout/checkout/notice-error-message';
 import RegionAddressFieldsets from './custom-form-fieldsets/region-address-fieldsets';
+import LocationSearch from 'blocks/location-search';
 import notices from 'notices';
 import { CALYPSO_CONTACT } from 'lib/url/support';
 import getCountries from 'state/selectors/get-countries';
@@ -321,6 +323,59 @@ export class ContactDetailsFormFields extends Component {
 		} );
 	};
 
+	updateAddressField( addressComponents, componentTypes, fieldName, useShortName = false ) {
+		let newValue = '';
+		componentTypes.forEach( componentType => {
+			const addressComponent = find(
+				addressComponents,
+				this.findAddressComponent( componentType )
+			);
+			if ( addressComponent ) {
+				newValue += useShortName ? addressComponent.short_name : addressComponent.long_name;
+				newValue += ' ';
+			}
+		} );
+
+		this.formStateController.handleFieldChange( {
+			name: fieldName,
+			value: newValue.trim(),
+		} );
+	}
+
+	handleAddressPredictionClick = prediction => {
+		// eslint-disable-next-line no-undef
+		const placesService = new google.maps.places.PlacesService( document.createElement( 'div' ) );
+		placesService.getDetails(
+			{
+				placeId: prediction.place_id,
+				fields: [ 'address_component' ],
+			},
+			( { address_components: addressComponents }, status ) => {
+				// eslint-disable-next-line no-undef
+				if ( status === google.maps.places.PlacesServiceStatus.OK ) {
+					this.updateAddressField( addressComponents, [ 'postal_code' ], 'postalCode' );
+					this.updateAddressField( addressComponents, [ 'country' ], 'countryCode', true );
+					this.updateAddressField( addressComponents, [ 'locality' ], 'city' );
+					this.updateAddressField(
+						addressComponents,
+						[ 'street_address', 'route', 'street_number' ],
+						'address1'
+					);
+					if ( this.props.hasCountryStates ) {
+						this.updateAddressField(
+							addressComponents,
+							[ 'administrative_area_level_1' ],
+							'state',
+							true
+						);
+					}
+
+					this.formStateController.sanitize();
+				}
+			}
+		);
+	};
+
 	getFieldProps = ( name, needsChildRef = false ) => {
 		const ref = needsChildRef
 			? { inputRef: this.getRefCallback( name ) }
@@ -362,6 +417,25 @@ export class ContactDetailsFormFields extends Component {
 		return get( this.state.form, 'countryCode.value', '' );
 	}
 
+	findAddressComponent( type ) {
+		return addressComponent => {
+			return includes( get( addressComponent, 'types', [] ), type );
+		};
+	}
+
+	renderLocationSearch() {
+		return (
+			<div className="contact-details-form-fields__container location-search">
+				<LocationSearch
+					card={ false }
+					types={ [ 'address' ] }
+					onPredictionClick={ this.handleAddressPredictionClick }
+					hidePredictionsOnClick={ true }
+				/>
+			</div>
+		);
+	}
+
 	renderContactDetailsFields() {
 		const { translate, needsFax, hasCountryStates, labelTexts } = this.props;
 		const countryCode = this.getCountryCode();
@@ -394,6 +468,8 @@ export class ContactDetailsFormFields extends Component {
 					this.createField( 'fax', Input, {
 						label: translate( 'Fax' ),
 					} ) }
+
+				{ true && this.renderLocationSearch() }
 
 				{ this.createField(
 					'country-code',
