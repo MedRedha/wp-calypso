@@ -8,6 +8,7 @@ import PropTypes from 'prop-types';
 import { loadScript } from '@automattic/load-script';
 import config from 'config';
 import { getLocaleSlug } from 'i18n-calypso';
+import { identity, noop } from 'lodash';
 
 /**
  * Internal dependencies
@@ -26,6 +27,7 @@ let autocompleteService = null;
 class LocationSearch extends Component {
 	static propTypes = {
 		onPredictionClick: PropTypes.func,
+		onSearch: PropTypes.func,
 		predictionsTransformation: PropTypes.func,
 		types: PropTypes.arrayOf( PropTypes.string ),
 		hidePredictionsOnClick: PropTypes.bool,
@@ -33,7 +35,8 @@ class LocationSearch extends Component {
 	};
 
 	static defaultProps = {
-		predictionsTransformation: predictions => predictions,
+		onSearch: noop,
+		predictionsTransformation: identity,
 		types: [ 'establishment' ],
 		hidePredictionsOnClick: false,
 		card: true,
@@ -72,6 +75,7 @@ class LocationSearch extends Component {
 
 	handleSearch = query => {
 		query = query.trim();
+		this.props.onSearch( query );
 
 		this.setState( { loading: true, query }, () => {
 			if ( query ) {

@@ -121,6 +121,7 @@ export class ContactDetailsFormFields extends Component {
 			phoneCountryCode: this.props.countryCode || this.props.userCountryCode,
 			form: null,
 			submissionCount: 0,
+			locationSelected: false,
 		};
 
 		this.inputRefs = {};
@@ -133,6 +134,7 @@ export class ContactDetailsFormFields extends Component {
 	// This is an attempt limit the redraws to only what we need.
 	shouldComponentUpdate( nextProps, nextState ) {
 		return (
+			nextState.locationSelected !== this.state.locationSelected ||
 			nextState.phoneCountryCode !== this.state.phoneCountryCode ||
 			! isEqual( nextState.form, this.state.form ) ||
 			! isEqual( nextProps.labelTexts, this.props.labelTexts ) ||
@@ -371,7 +373,10 @@ export class ContactDetailsFormFields extends Component {
 					}
 
 					this.formStateController.sanitize();
+					this.formStateController.validate();
 				}
+
+				this.setState( { locationSelected: true } );
 			}
 		);
 	};
@@ -429,12 +434,43 @@ export class ContactDetailsFormFields extends Component {
 				<LocationSearch
 					card={ false }
 					types={ [ 'address' ] }
+					onSearch={ this.handleLocationSearch }
 					onPredictionClick={ this.handleAddressPredictionClick }
 					hidePredictionsOnClick={ true }
 				/>
 			</div>
 		);
 	}
+
+	handleLocationSearch = query => {
+		if ( query.length === 0 ) {
+			this.setState( { locationSelected: false } );
+			this.formStateController.handleFieldChange( {
+				name: 'postalCode',
+				value: '',
+			} );
+			this.formStateController.handleFieldChange( {
+				name: 'countryCode',
+				value: '',
+			} );
+			this.formStateController.handleFieldChange( {
+				name: 'city',
+				value: '',
+			} );
+			this.formStateController.handleFieldChange( {
+				name: 'address1',
+				value: '',
+			} );
+			this.formStateController.handleFieldChange( {
+				name: 'address2',
+				value: '',
+			} );
+			this.formStateController.handleFieldChange( {
+				name: 'state',
+				value: '',
+			} );
+		}
+	};
 
 	renderContactDetailsFields() {
 		const { translate, needsFax, hasCountryStates, labelTexts } = this.props;
@@ -469,19 +505,20 @@ export class ContactDetailsFormFields extends Component {
 						label: translate( 'Fax' ),
 					} ) }
 
-				{ true && this.renderLocationSearch() }
+				{ this.renderLocationSearch() }
 
-				{ this.createField(
-					'country-code',
-					CountrySelect,
-					{
-						label: translate( 'Country' ),
-						countriesList: this.props.countriesList,
-					},
-					true
-				) }
+				{ this.state.locationSelected &&
+					this.createField(
+						'country-code',
+						CountrySelect,
+						{
+							label: translate( 'Country' ),
+							countriesList: this.props.countriesList,
+						},
+						true
+					) }
 
-				{ countryCode && (
+				{ this.state.locationSelected && countryCode && (
 					<RegionAddressFieldsets
 						getFieldProps={ this.getFieldProps }
 						countryCode={ countryCode }
