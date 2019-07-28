@@ -34,6 +34,7 @@ import {
 import { onboardPasswordlessUser } from 'lib/signup/step-actions';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { getCurrentOAuth2Client } from 'state/ui/oauth2-clients/selectors';
+import Notice from 'components/notice';
 
 /**
  * Style dependencies
@@ -199,24 +200,28 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 
 	submitStep = data => {
 		const { flowName, stepName, goToNextStep, submitCreateAccountStep, oauth2Signup } = this.props;
-		let stepDependencies = {};
 
 		if ( oauth2Signup ) {
 			const { oauth2_client_id, oauth2_redirect } = data.queryArgs;
-			stepDependencies = {
-				oauth2_client_id,
-				oauth2_redirect,
-			};
+			submitCreateAccountStep(
+				{
+					flowName,
+					stepName,
+				},
+				{
+					oauth2_client_id,
+					oauth2_redirect,
+				}
+			);
+		} else {
+			submitCreateAccountStep(
+				{
+					flowName,
+					stepName,
+				},
+				data
+			);
 		}
-		submitCreateAccountStep(
-			{
-				flowName,
-				stepName,
-				oauth2Signup,
-				...data,
-			},
-			stepDependencies
-		);
 
 		this.submitTracksEvent( true, 'Successful login', !! oauth2Signup );
 		goToNextStep();
@@ -303,6 +308,13 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 
 		return (
 			<div className="create-account__form-wrapper">
+				{ this.userCreationComplete() && (
+					<Notice showDismiss={ false } status="is-error">
+						{ translate(
+							'Your account has already been created. You can change your email, username, and password later.'
+						) }
+					</Notice>
+				) }
 				<LoggedOutForm onSubmit={ this.onFormSubmit } noValidate>
 					<ValidationFieldset errorMessages={ errorMessages }>
 						<FormLabel htmlFor="email">{ translate( 'Enter your email address' ) }</FormLabel>
