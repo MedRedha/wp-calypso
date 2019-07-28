@@ -83,12 +83,24 @@ function filterDestination( destination, dependencies ) {
 	return destination;
 }
 
+function getDefaultFlow() {
+	if ( config.isEnabled( 'signup/onboarding-flow' ) ) {
+		/*
+		AB Test: testing whether a passwordless account creation and login
+		improves signup rate in the onboarding flow
+	*/
+		return abtest( 'createAccountUserStep' ) === 'createAccount'
+			? 'create'
+			: abtest( 'improvedOnboarding' );
+	}
+
+	return 'main';
+}
+
 const Flows = {
 	filterDestination,
 
-	defaultFlowName: config.isEnabled( 'signup/onboarding-flow' )
-		? abtest( 'improvedOnboarding' )
-		: 'main',
+	defaultFlowName: getDefaultFlow(),
 	excludedSteps: [],
 
 	/**
@@ -109,21 +121,6 @@ const Flows = {
 
 		if ( user && user.get() ) {
 			flow = removeUserStepFromFlow( flow );
-		}
-		/*
-			AB Test: testing whether a passwordless account creation and login
-			improves signup rate in the onboarding flow
-
-			If the flow contains a user step, we replace it with the passwordless create-account step.
-		 */
-		if (
-			abtest( 'createAccountUserStep' ) === 'createAccount' &&
-			'onboarding' === flowName &&
-			includes( flow.steps, 'user' )
-		) {
-			flow = assign( {}, flow, {
-				steps: flow.steps.map( stepName => ( 'user' === stepName ? 'create-account' : stepName ) ),
-			} );
 		}
 
 		return Flows.filterExcludedSteps( flow );

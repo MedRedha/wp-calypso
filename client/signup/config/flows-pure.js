@@ -138,6 +138,21 @@ export function generateFlows( {
 			lastModified: '2019-06-20',
 		},
 
+		create: {
+			steps: [
+				'create-account',
+				'site-type',
+				'site-topic-with-preview',
+				'site-title-with-preview',
+				'site-style-with-preview',
+				'domains-with-preview',
+				'plans',
+			],
+			destination: getSignupDestination,
+			description: 'The improved onboarding flow with passwordless login and account creation.',
+			lastModified: '2019-07-28',
+		},
+
 		desktop: {
 			steps: [ 'about', 'themes', 'domains', 'plans', 'user' ],
 			destination: getSignupDestination,
