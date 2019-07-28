@@ -83,24 +83,12 @@ function filterDestination( destination, dependencies ) {
 	return destination;
 }
 
-function getDefaultFlow() {
-	if ( config.isEnabled( 'signup/onboarding-flow' ) ) {
-		/*
-		AB Test: testing whether a passwordless account creation and login
-		improves signup rate in the onboarding flow
-	*/
-		return abtest( 'createAccountUserStep' ) === 'createAccount'
-			? 'create'
-			: abtest( 'improvedOnboarding' );
-	}
-
-	return 'main';
-}
-
 const Flows = {
 	filterDestination,
 
-	defaultFlowName: getDefaultFlow(),
+	defaultFlowName: config.isEnabled( 'signup/onboarding-flow' )
+		? abtest( 'improvedOnboarding' )
+		: 'main',
 	excludedSteps: [],
 
 	/**
