@@ -5,7 +5,7 @@
  */
 
 import debugModule from 'debug';
-import { cloneDeep, get, isNil, map, pick, throttle } from 'lodash';
+import { get, map, pick, throttle } from 'lodash';
 
 /**
  * Internal dependencies
@@ -15,6 +15,7 @@ import { getStoredItem, setStoredItem, clearStorage } from 'lib/browser-storage'
 import { isSupportSession } from 'lib/user/support-user-interop';
 import config from 'config';
 import User from 'lib/user';
+import { getInitialState as getEmptyState } from 'state/utils/get-initial-state';
 
 /**
  * Module variables
@@ -104,22 +105,19 @@ function verifyStateTimestamp( state ) {
 	return state._timestamp && state._timestamp + MAX_AGE > Date.now();
 }
 
-export async function getStateFromLocalStorage( reducer, subkey ) {
-	const reduxStateKey = getReduxStateKey() + ( subkey ? ':' + subkey : '' );
+export async function getStateFromLocalStorage( reducer, subkey, forceLoggedOutUser = false ) {
+	let reduxStateKey;
+	if ( forceLoggedOutUser ) {
+		reduxStateKey = 'redux-state-logged-out' + ( subkey ? ':' + subkey : '' );
+	} else {
+		reduxStateKey = getReduxStateKey() + ( subkey ? ':' + subkey : '' );
+	}
 
 	try {
-		let loggedOutState;
-		let storedState = await getStoredItem( reduxStateKey );
-		if ( reduxStateKey !== 'redux-state-logged-out' ) {
-			loggedOutState = await getStoredItem( 'redux-state-logged-out' );
-			debug( 'fetched stored logged out Redux state from persistent storage', loggedOutState );
-		}
+		const storedState = await getStoredItem( reduxStateKey );
 		debug( 'fetched stored Redux state from persistent storage', storedState );
 
-		if ( isNil( storedState ) && loggedOutState ) {
-			debug( 'stored Redux state not found, loading from loggedOutState instead' );
-			storedState = cloneDeep( loggedOutState );
-		} else if ( storedState === null ) {
+		if ( storedState === null ) {
 			debug( 'stored Redux state not found in persistent storage' );
 			return null;
 		}
@@ -135,11 +133,7 @@ export async function getStateFromLocalStorage( reducer, subkey ) {
 			return null;
 		}
 
-		if (
-			! subkey &&
-			get( deserializedState, [ 'currentUser', 'id' ], null ) !== null &&
-			! verifyStoredRootState( deserializedState )
-		) {
+		if ( ! subkey && ! verifyStoredRootState( deserializedState ) ) {
 			debug( 'stored root Redux state has invalid currentUser.id, dropping' );
 			return null;
 		}
@@ -248,13 +242,19 @@ async function getInitialStoredState( initialReducer ) {
 
 	let initialStoredState = await getStateFromLocalStorage( initialReducer );
 	if ( ! initialStoredState ) {
-		return null;
+		initialStoredState = getEmptyState( initialReducer );
 	}
 
 	const storageKeys = [ ...initialReducer.getStorageKeys() ];
 
 	async function loadReducerState( { storageKey, reducer } ) {
-		const storedState = await getStateFromLocalStorage( reducer, storageKey );
+		let storedState = await getStateFromLocalStorage( reducer, storageKey, false );
+
+		if ( ! storedState && storageKey === 'signup' ) {
+			storedState = await getStateFromLocalStorage( reducer, storageKey, true );
+			debug( 'fetched signup state from logged out state', storedState );
+		}
+
 		if ( storedState ) {
 			initialStoredState = initialReducer( initialStoredState, {
 				type: APPLY_STORED_STATE,
