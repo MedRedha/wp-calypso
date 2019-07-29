@@ -57,8 +57,7 @@ function removeUnneededSteps( state, { flowName } ) {
 	flowSteps = get( flows, [ flowName, 'steps' ], [] );
 
 	if ( user && user.get() ) {
-		// item !== 'create-account' temp condition for createAccountUserStep AB test
-		flowSteps = flowSteps.filter( item => item !== 'user' || item !== 'create-account' );
+		flowSteps = flowSteps.filter( item => item !== 'user' );
 	}
 
 	return state.filter(
@@ -77,7 +76,18 @@ function saveStep( state, { step } ) {
 
 function submitStep( state, { step } ) {
 	const stepHasApiRequestFunction = get( stepsConfig, [ step.stepName, 'apiRequestFunction' ] );
-	const status = stepHasApiRequestFunction ? 'pending' : 'completed';
+	let status = stepHasApiRequestFunction ? 'pending' : 'completed';
+
+	/*
+		AB Test: passwordlessSignup
+
+		`isPasswordlessSignupForm` in this check is for the `onboarding` flow.
+
+		We are testing whether a passwordless account creation and login improves signup rate in the `onboarding` flow
+	*/
+	if ( get( step, 'isPasswordlessSignupForm', false ) ) {
+		status = 'completed';
+	}
 
 	if ( find( state, { stepName: step.stepName } ) ) {
 		return updateStep( state, { ...step, status } );

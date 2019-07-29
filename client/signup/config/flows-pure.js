@@ -11,7 +11,6 @@ import { translate } from 'i18n-calypso';
  */
 import config from 'config';
 import { addQueryArgs } from 'lib/route';
-import { abtest } from 'lib/abtest';
 
 export function generateFlows( {
 	getSiteDestination = noop,
@@ -19,16 +18,6 @@ export function generateFlows( {
 	getSignupDestination = noop,
 	getThankYouNoSiteDestination = noop,
 } = {} ) {
-	/*
-		AB Test:
-		This step variable is for the `onboarding` flow.
-
-		We are testing whether a passwordless account creation and login
-		improves signup rate in the `onboarding` flow
-	*/
-	const createAccountUserStepValue =
-		abtest && 'createAccount' === abtest( 'createAccountUserStep' ) ? 'create-account' : 'user';
-
 	const flows = {
 		account: {
 			steps: [ 'user' ],
@@ -136,7 +125,7 @@ export function generateFlows( {
 
 		onboarding: {
 			steps: [
-				createAccountUserStepValue,
+				'user',
 				'site-type',
 				'site-topic-with-preview',
 				'site-title-with-preview',

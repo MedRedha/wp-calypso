@@ -726,7 +726,7 @@ export function isSiteTopicFulfilled( stepName, defaultDependencies, nextProps )
 export async function onboardPasswordlessUser( callback, { email } ) {
 	try {
 		const response = await wpcom.undocumented().usersEmailOnboard( { email }, null );
-		callback( null, { email, username: response.username, bearer_token: response.bearer_token } );
+		callback( null, { username: response.username, bearer_token: response.bearer_token } );
 	} catch ( err ) {
 		callback( err );
 	}

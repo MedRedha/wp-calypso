@@ -252,6 +252,22 @@ assign( SignupFlowController.prototype, {
 			dependencies
 		);
 
+		/*
+			AB Test: passwordlessSignup
+
+			`isPasswordlessSignupForm` in this check is for the `onboarding` flow.
+
+			We are testing whether a passwordless account creation and login improves signup rate in the `onboarding` flow
+		*/
+		if ( get( step, 'isPasswordlessSignupForm', false ) ) {
+			this._processingSteps.delete( step.stepName );
+			analytics.tracks.recordEvent( 'calypso_signup_actions_complete_step', {
+				step: step.stepName,
+			} );
+			this._reduxStore.dispatch( completeSignupStep( step, dependenciesFound ) );
+			return;
+		}
+
 		// deferred because a step can be processed as soon as it is submitted
 		defer( () => {
 			this._reduxStore.dispatch( processStep( step ) );
