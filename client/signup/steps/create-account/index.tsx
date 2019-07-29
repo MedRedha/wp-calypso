@@ -294,6 +294,16 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 		);
 	}
 
+	renderNotice() {
+		return (
+			<Notice showDismiss={ false } status="is-error">
+				{ this.props.translate(
+					'Your account has already been created. You can change your email, username, and password later.'
+				) }
+			</Notice>
+		);
+	}
+
 	renderStepContent() {
 		const { translate, isSocialSignupEnabled, contextHashObject } = this.props;
 		const { email, errorMessages, isSubmitting } = this.state;
@@ -308,13 +318,7 @@ export class CreateAccount extends Component< Props & LocalizeProps, State > {
 
 		return (
 			<div className="create-account__form-wrapper">
-				{ this.userCreationComplete() && (
-					<Notice showDismiss={ false } status="is-error">
-						{ translate(
-							'Your account has already been created. You can change your email, username, and password later.'
-						) }
-					</Notice>
-				) }
+				{ this.userCreationComplete() && this.renderNotice() }
 				<LoggedOutForm onSubmit={ this.onFormSubmit } noValidate>
 					<ValidationFieldset errorMessages={ errorMessages }>
 						<FormLabel htmlFor="email">{ translate( 'Enter your email address' ) }</FormLabel>
