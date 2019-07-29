@@ -7,9 +7,13 @@
  * External dependencies
  */
 import React from 'react';
+import { Provider } from 'react-redux';
 import { shallow } from 'enzyme';
 import { identity } from 'lodash';
 
+/**
+ * Internal dependencies
+ */
 import { WebPaymentBox } from '../web-payment-box';
 import { BEFORE_SUBMIT } from 'lib/store-transactions/step-types';
 import PaymentCountrySelect from 'components/payment-country-select';
@@ -56,14 +60,14 @@ describe( 'WebPaymentBox', () => {
 		transaction: {},
 	};
 
-	const context = {
-		// mock Redux store to keep connect() calls happy
-		store: {
-			subscribe: jest.fn(),
-			dispatch: jest.fn(),
-			getState: jest.fn(),
-		},
+	// mock Redux store to keep connect() calls happy
+	const store = {
+		subscribe: jest.fn(),
+		dispatch: jest.fn(),
+		getState: jest.fn(),
 	};
+
+	const ReduxProvider = ( { children } ) => <Provider store={ store }>{ children }</Provider>;
 
 	test( 'should render', () => {
 		shallow( <WebPaymentBox { ...defaultProps } /> );
@@ -71,8 +75,12 @@ describe( 'WebPaymentBox', () => {
 
 	describe( 'Cart Store Integration', () => {
 		describe( 'Country Code', () => {
-			const countrySelectWrapper = () =>
-				shallow( <WebPaymentBox { ...defaultProps } />, { context } ).find( PaymentCountrySelect );
+			const countrySelectWrapper = () => {
+				const wrapper = shallow( <WebPaymentBox { ...defaultProps } />, {
+					wrappingComponent: ReduxProvider,
+				} );
+				return wrapper.find( PaymentCountrySelect );
+			};
 
 			test( 'Should render value from the cart store', () => {
 				expect(
@@ -93,10 +101,12 @@ describe( 'WebPaymentBox', () => {
 		} );
 
 		describe( 'Postal Code', () => {
-			const postalCodeInputWrapper = () =>
-				shallow( <WebPaymentBox { ...defaultProps } />, { context } ).findWhere(
-					n => n.prop( 'name' ) === 'postal-code'
-				);
+			const postalCodeInputWrapper = () => {
+				const wrapper = shallow( <WebPaymentBox { ...defaultProps } />, {
+					wrappingComponent: ReduxProvider,
+				} );
+				return wrapper.findWhere( n => n.prop( 'name' ) === 'postal-code' );
+			};
 
 			test( 'Should render value from the cart store', () => {
 				expect( postalCodeInputWrapper().prop( 'value' ) ).toEqual( 'TEST_CART_POSTAL_CODE' );
