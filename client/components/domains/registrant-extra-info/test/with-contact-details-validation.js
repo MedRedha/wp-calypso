@@ -3,6 +3,7 @@
  * External dependencies
  */
 import React from 'react';
+import { Provider } from 'react-redux';
 import { shallow } from 'enzyme';
 import { difference, identity, set } from 'lodash';
 
@@ -15,15 +16,18 @@ jest.mock( 'state/selectors/get-validation-schemas', () => () => ( {
 	uk: require( './uk-schema.json' ),
 } ) );
 
+const mockStore = {
+	getState: () => {},
+	subscribe: () => {},
+	dispatch: () => {},
+};
+
+const MockReduxProvider = ( { children } ) => <Provider store={ mockStore }>{ children }</Provider>;
+
 const mockProps = {
 	translate: identity,
 	updateContactDetailsCache: identity,
 	tld: 'uk',
-	store: {
-		getState: () => {},
-		subscribe: () => {},
-		dispatch: () => {},
-	},
 };
 
 describe( 'uk-form validation', () => {
@@ -81,7 +85,8 @@ describe( 'uk-form validation', () => {
 						{ ...mockProps }
 						contactDetails={ set( testContactDetails, 'extra.uk.registrantType', registrantType ) }
 						ccTldDetails={ { registrantType } }
-					/>
+					/>,
+					{ wrappingComponent: MockReduxProvider }
 				).dive();
 
 				expect( wrapper.props() ).toMatchObject( {
@@ -114,7 +119,8 @@ describe( 'uk-form validation', () => {
 						{ ...mockProps }
 						contactDetails={ set( testContactDetails, 'extra.uk.registrantType', registrantType ) }
 						ccTldDetails={ { registrantType } }
-					/>
+					/>,
+					{ wrappingComponent: MockReduxProvider }
 				).dive();
 
 				expect( wrapper.props() ).toHaveProperty( 'validationErrors', {} );
@@ -143,7 +149,8 @@ describe( 'uk-form validation', () => {
 							registrationNumber
 						) }
 						ccTldDetails={ { registrationNumber } }
-					/>
+					/>,
+					{ wrappingComponent: MockReduxProvider }
 				).dive();
 
 				expect( wrapper.props() ).toHaveProperty( 'validationErrors.extra.uk.registrationNumber' );
@@ -169,7 +176,8 @@ describe( 'uk-form validation', () => {
 						{ ...mockProps }
 						contactDetails={ set( testContactDetails, 'extra.uk.registrantType', registrantType ) }
 						ccTldDetails={ { registrantType } }
-					/>
+					/>,
+					{ wrappingComponent: MockReduxProvider }
 				).dive();
 
 				expect( wrapper.props() ).toMatchObject( {
@@ -203,7 +211,8 @@ describe( 'uk-form validation', () => {
 						{ ...mockProps }
 						contactDetails={ testContactDetails }
 						ccTldDetails={ testContactDetails.extra.uk }
-					/>
+					/>,
+					{ wrappingComponent: MockReduxProvider }
 				).dive();
 
 				expect( wrapper.props() ).toHaveProperty( 'validationErrors', {} );
