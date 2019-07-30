@@ -37,6 +37,7 @@ import {
 	processStep,
 	removeUnneededSteps,
 } from 'state/signup/progress/actions';
+import { abtest } from 'lib/abtest';
 
 function progressStoreListener( reduxStore, callback ) {
 	let prevState = getSignupProgress( reduxStore.getState() );
@@ -259,7 +260,10 @@ assign( SignupFlowController.prototype, {
 
 			We are testing whether a passwordless account creation and login improves signup rate in the `onboarding` flow
 		*/
-		if ( get( step, 'isPasswordlessSignupForm', false ) ) {
+		if (
+			'passwordless' === abtest( 'passwordlessSignup' ) &&
+			get( step, 'isPasswordlessSignupForm' )
+		) {
 			this._processingSteps.delete( step.stepName );
 			analytics.tracks.recordEvent( 'calypso_signup_actions_complete_step', {
 				step: step.stepName,
