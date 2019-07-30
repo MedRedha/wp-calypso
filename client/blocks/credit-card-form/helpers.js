@@ -24,10 +24,16 @@ export async function saveCreditCard( {
 	formFieldValues,
 } ) {
 	const cardDetails = kebabCaseFormFields( formFieldValues );
-	const { token } = await createCardTokenAsync( { cardDetails, createCardToken } );
+	// TODO: if using stripe, create a setup intent
+	const tokenResponse = await createCardToken( cardDetails );
+	// createStripePaymentMethod returns the token as `id`, but otherwise it is `token`
+	const token = tokenResponse.token || tokenResponse.id || null;
+	if ( ! token ) {
+		throw new Error( translate( 'Failed to add card.' ) );
+	}
 
 	if ( saveStoredCard ) {
-		await saveStoredCard( { token } );
+		await saveStoredCard( { token } ); // TODO: do we need to mark this as stripe? also do we need to send along other data?
 		notices.success( translate( 'Card added successfully' ), {
 			persistent: true,
 		} );
@@ -89,16 +95,18 @@ export function useDebounce( value, delay ) {
 	return [ debouncedValue, setDebouncedValue ];
 }
 
-function createCardTokenAsync( { cardDetails, createCardToken } ) {
-	return new Promise( ( resolve, reject ) => {
-		createCardToken( cardDetails, ( gatewayError, gatewayData ) => {
-			if ( gatewayError || ! gatewayData.token ) {
-				reject( gatewayError || new Error( 'No card token returned' ) );
-				return;
-			}
-			resolve( gatewayData );
+export function makeAsyncCreateCardToken( cardDetails ) {
+	return createCardToken => {
+		return new Promise( ( resolve, reject ) => {
+			createCardToken( cardDetails, ( gatewayError, gatewayData ) => {
+				if ( gatewayError || ! gatewayData.token ) {
+					reject( gatewayError || new Error( 'No card token returned' ) );
+					return;
+				}
+				resolve( gatewayData );
+			} );
 		} );
-	} );
+	};
 }
 
 export function areFormFieldsEmpty( formFieldValues ) {

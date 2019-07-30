@@ -22,6 +22,7 @@ import { AUTO_RENEWAL, MANAGE_PURCHASES } from 'lib/url/support';
 import getCountries from 'state/selectors/get-countries';
 import QueryPaymentCountries from 'components/data/query-countries/payments';
 import { localizeUrl } from 'lib/i18n-utils';
+import { createStripePaymentMethod } from 'lib/stripe';
 import {
 	getInitializedFields,
 	camelCaseFormFields,
@@ -30,6 +31,7 @@ import {
 	areFormFieldsEmpty,
 	useDebounce,
 	saveCreditCard,
+	makeAsyncCreateCardToken,
 } from './helpers';
 
 /**
@@ -107,8 +109,20 @@ export function CreditCardForm( {
 				throw new Error( translate( 'Your credit card information is not valid' ) );
 			}
 			recordFormSubmitEvent();
+			const createCardTokenAsync = makeAsyncCreateCardToken( createCardToken );
+			const createStripePaymentMethodAsync = async paymentDetails => {
+				const { name, country, 'postal-code': zip } = paymentDetails;
+				const paymentDetailsForStripe = {
+					name,
+					address: {
+						country: country,
+						postal_code: zip,
+					},
+				};
+				return createStripePaymentMethod( stripe, paymentDetailsForStripe );
+			};
 			await saveCreditCard( {
-				createCardToken,
+				createCardToken: stripe ? createStripePaymentMethodAsync : createCardTokenAsync,
 				saveStoredCard,
 				translate,
 				successCallback,
