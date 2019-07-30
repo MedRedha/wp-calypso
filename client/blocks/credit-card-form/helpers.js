@@ -22,9 +22,9 @@ export async function saveCreditCard( {
 	purchase,
 	siteSlug,
 	formFieldValues,
+	stripeConfiguration,
 } ) {
 	const cardDetails = kebabCaseFormFields( formFieldValues );
-	// TODO: if using stripe, create a setup intent
 	const tokenResponse = await createCardToken( cardDetails );
 	// createStripePaymentMethod returns the token as `id`, but otherwise it is `token`
 	const token = tokenResponse.token || tokenResponse.id || null;
@@ -33,7 +33,10 @@ export async function saveCreditCard( {
 	}
 
 	if ( saveStoredCard ) {
-		await saveStoredCard( { token } ); // TODO: do we need to mark this as stripe? also do we need to send along other data?
+		const additionalData = stripeConfiguration
+			? { payment_partner: stripeConfiguration.processor_id }
+			: {};
+		await saveStoredCard( { token, additionalData } );
 		notices.success( translate( 'Card added successfully' ), {
 			persistent: true,
 		} );

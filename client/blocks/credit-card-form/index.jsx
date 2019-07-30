@@ -58,6 +58,7 @@ export function CreditCardForm( {
 	onCancel,
 	translate,
 	stripe,
+	stripeConfiguration,
 } ) {
 	const [ formSubmitting, setFormSubmitting ] = useState( false );
 	const [ formFieldValues, setFormFieldValues ] = useState( getInitializedFields( initialValues ) );
@@ -133,6 +134,7 @@ export function CreditCardForm( {
 				purchase,
 				siteSlug,
 				formFieldValues,
+				stripeConfiguration,
 			} );
 		} catch ( error ) {
 			debug( 'Error while submitting', error );
