@@ -23,7 +23,7 @@ import { billingHistory } from 'me/purchases/paths';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
 import { withStripe } from 'lib/stripe';
 
-const CreditCardFormWithStripe = withStripe( CreditCardForm );
+const CreditCardFormWithStripe = withStripe( CreditCardForm, { needs_intent: true } );
 
 function AddCreditCard( props ) {
 	const createAddCardToken = ( ...args ) => createCardToken( 'card_add', ...args );
