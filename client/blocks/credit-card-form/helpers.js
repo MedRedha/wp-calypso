@@ -23,11 +23,11 @@ export async function saveCreditCard( {
 	siteSlug,
 	formFieldValues,
 	stripeConfiguration,
+	getTokenFromCreateCardToken,
 } ) {
 	const cardDetails = kebabCaseFormFields( formFieldValues );
 	const tokenResponse = await createCardToken( cardDetails );
-	// createStripePaymentMethod returns the token as `id`, but otherwise it is `token`
-	const token = tokenResponse.token || tokenResponse.id || null;
+	const token = getTokenFromCreateCardToken( tokenResponse );
 	if ( ! token ) {
 		throw new Error( translate( 'Failed to add card.' ) );
 	}

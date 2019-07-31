@@ -125,6 +125,8 @@ export function CreditCardForm( {
 				};
 				return createStripeSetupIntent( stripe, stripeConfiguration, paymentDetailsForStripe );
 			};
+			const parseStripeToken = response => response.payment_method;
+			const parsePaygateToken = response => response.token;
 			await saveCreditCard( {
 				createCardToken: stripe ? createStripeSetupIntentAsync : createCardTokenAsync,
 				saveStoredCard,
@@ -135,6 +137,7 @@ export function CreditCardForm( {
 				siteSlug,
 				formFieldValues,
 				stripeConfiguration,
+				getTokenFromCreateCardToken: stripe ? parseStripeToken : parsePaygateToken,
 			} );
 		} catch ( error ) {
 			debug( 'Error while submitting', error );
