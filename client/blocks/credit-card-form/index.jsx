@@ -23,7 +23,7 @@ import { AUTO_RENEWAL, MANAGE_PURCHASES } from 'lib/url/support';
 import getCountries from 'state/selectors/get-countries';
 import QueryPaymentCountries from 'components/data/query-countries/payments';
 import { localizeUrl } from 'lib/i18n-utils';
-import { createStripePaymentMethod } from 'lib/stripe';
+import { createStripeSetupIntent } from 'lib/stripe';
 import {
 	getInitializedFields,
 	camelCaseFormFields,
@@ -114,7 +114,7 @@ export function CreditCardForm( {
 			}
 			recordFormSubmitEvent();
 			const createCardTokenAsync = makeAsyncCreateCardToken( createCardToken );
-			const createStripePaymentMethodAsync = async paymentDetails => {
+			const createStripeSetupIntentAsync = async paymentDetails => {
 				const { name, country, 'postal-code': zip } = paymentDetails;
 				const paymentDetailsForStripe = {
 					name,
@@ -123,10 +123,10 @@ export function CreditCardForm( {
 						postal_code: zip,
 					},
 				};
-				return createStripePaymentMethod( stripe, paymentDetailsForStripe );
+				return createStripeSetupIntent( stripe, stripeConfiguration, paymentDetailsForStripe );
 			};
 			await saveCreditCard( {
-				createCardToken: stripe ? createStripePaymentMethodAsync : createCardTokenAsync,
+				createCardToken: stripe ? createStripeSetupIntentAsync : createCardTokenAsync,
 				saveStoredCard,
 				translate,
 				successCallback,
