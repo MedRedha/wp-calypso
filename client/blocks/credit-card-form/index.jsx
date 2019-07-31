@@ -31,7 +31,7 @@ import {
 	assignAllFormFields,
 	areFormFieldsEmpty,
 	useDebounce,
-	saveCreditCard,
+	saveOrUpdateCreditCard,
 	makeAsyncCreateCardToken,
 } from './helpers';
 
@@ -127,18 +127,18 @@ export function CreditCardForm( {
 			};
 			const parseStripeToken = response => response.payment_method;
 			const parsePaygateToken = response => response.token;
-			await saveCreditCard( {
+			await saveOrUpdateCreditCard( {
 				createCardToken: stripe ? createStripeSetupIntentAsync : createCardTokenAsync,
 				saveStoredCard,
 				translate,
-				successCallback,
 				apiParams,
 				purchase,
 				siteSlug,
 				formFieldValues,
 				stripeConfiguration,
-				getTokenFromCreateCardToken: stripe ? parseStripeToken : parsePaygateToken,
+				parseTokenFromResponse: stripe ? parseStripeToken : parsePaygateToken,
 			} );
+			successCallback();
 		} catch ( error ) {
 			debug( 'Error while submitting', error );
 			setFormSubmitting( false );
