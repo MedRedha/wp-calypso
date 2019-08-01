@@ -25,7 +25,7 @@ import Emitter from 'lib/mixins/emitter';
 import { isE2ETest } from 'lib/e2e';
 import { getComputedAttributes, filterUserObject } from './shared-utils';
 import { getLanguage } from 'lib/i18n-utils/utils';
-import localforage from 'lib/localforage';
+import { clearStorage } from 'lib/browser-storage';
 import { getActiveTestNames, ABTEST_LOCALSTORAGE_KEY } from 'lib/abtest/utility';
 
 /**
@@ -144,19 +144,15 @@ User.prototype.fetch = function() {
 	this.fetching = true;
 	debug( 'Getting user from api' );
 
-	me.get(
-		{ meta: 'flags', abtests: getActiveTestNames( { appendDatestamp: true, asCSV: true } ) },
-		( error, data ) => {
-			if ( error ) {
-				this.handleFetchFailure( error );
-				return;
-			}
-
+	me.get( { meta: 'flags', abtests: getActiveTestNames( { appendDatestamp: true, asCSV: true } ) } )
+		.then( data => {
 			const userData = filterUserObject( data );
 			this.handleFetchSuccess( userData );
 			debug( 'User successfully retrieved' );
-		}
-	);
+		} )
+		.catch( error => {
+			this.handleFetchFailure( error );
+		} );
 };
 
 /**
@@ -166,6 +162,9 @@ User.prototype.fetch = function() {
  * @param {Error} error network response error
  */
 User.prototype.handleFetchFailure = function( error ) {
+	// Release lock from subsequent fetches
+	this.fetching = false;
+
 	if ( ! config.isEnabled( 'wpcom-user-bootstrap' ) && error.error === 'authorization_required' ) {
 		/**
 		 * if the user bootstrap is disabled (in development), we need to rely on a request to
@@ -176,7 +175,8 @@ User.prototype.handleFetchFailure = function( error ) {
 		this.initialized = true;
 		this.emit( 'change' );
 	} else {
-		debug( 'Something went wrong trying to get the user.' );
+		// eslint-disable-next-line no-console
+		console.error( 'Failed to fetch the user from /me endpoint:', error );
 	}
 };
 
@@ -260,9 +260,9 @@ User.prototype.clear = function( onClear ) {
 	delete this.settings;
 	store.clearAll();
 	if ( config.isEnabled( 'persist-redux' ) ) {
-		localforage.clear( onClear );
+		clearStorage().then( onClear );
 	} else if ( onClear ) {
-		onClear();
+		Promise.resolve().then( onClear );
 	}
 };
 

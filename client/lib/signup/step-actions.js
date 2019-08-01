@@ -163,22 +163,23 @@ export function createSiteWithCart(
 			site_style: siteStyle || undefined,
 			site_segment: siteSegment || undefined,
 			site_vertical: siteVerticalId || undefined,
+			site_information: {
+				title: siteTitle,
+			},
 		},
 		public: 1,
 		validate: false,
 	};
 
-	const importingFromUrl =
-		'import' === flowName ? normalizeImportUrl( getNuxUrlInputValue( state ) ) : '';
-	const importEngine = 'import' === flowName ? getSelectedImportEngine( state ) : '';
-
 	// flowName isn't always passed in
 	const flowToCheck = flowName || lastKnownFlow;
 
-	if ( importingFromUrl ) {
-		newSiteParams.blog_name = importingFromUrl;
+	if ( 'import' === flowName ) {
+		const importingFromUrl = getNuxUrlInputValue( state );
+		newSiteParams.blog_name = normalizeImportUrl( importingFromUrl );
 		newSiteParams.find_available_url = true;
-		newSiteParams.options.nux_import_engine = importEngine;
+		newSiteParams.options.nux_import_engine = getSelectedImportEngine( state );
+		newSiteParams.options.nux_import_from_url = importingFromUrl;
 	} else if ( ! siteUrl && isDomainStepSkippable( flowToCheck ) ) {
 		newSiteParams.blog_name =
 			get( user.get(), 'username' ) ||
@@ -254,6 +255,20 @@ export function fetchSitesAndUser( siteSlug, onComplete, reduxStore ) {
 			user.fetch();
 		} ),
 	] ).then( onComplete );
+}
+
+export function fetchUser( userInstance = user ) {
+	// @TODO: When user fetching is reduxified, let's get rid of this hack.
+	return new Promise( resolve => {
+		const userFetched = setInterval( () => {
+			const loadedUser = userInstance.get();
+			if ( loadedUser ) {
+				clearInterval( userFetched );
+				resolve( loadedUser );
+				return;
+			}
+		}, 333 );
+	} );
 }
 
 export function setThemeOnSite( callback, { siteSlug, themeSlugWithRepo } ) {
@@ -523,6 +538,12 @@ export function createAccount(
 
 				// Fire after a new user registers.
 				analytics.recordRegistration();
+
+				// Try to fetch the user so we can track the newly-created account
+				fetchUser( user ).then( () => {
+					analytics.setUser( user );
+					analytics.identifyUser();
+				} );
 
 				const username =
 					( response && response.signup_sandbox_username ) ||

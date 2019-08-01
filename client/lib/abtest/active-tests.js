@@ -99,16 +99,6 @@ export default {
 		defaultVariation: 'noOffer',
 		allowExistingUsers: true,
 	},
-	hideDotBlogSubdomainsV2: {
-		datestamp: '20190626',
-		variations: {
-			show: 50,
-			hide: 50,
-		},
-		defaultVariation: 'show',
-		allowExistingUsers: true,
-		localeTargets: 'any',
-	},
 	popularPlanBy: {
 		datestamp: '20190529',
 		variations: {
@@ -136,10 +126,10 @@ export default {
 		allowExistingUsers: true,
 	},
 	skippableDomainStep: {
-		datestamp: '20190702',
+		datestamp: '20190717',
 		variations: {
-			skippable: 50,
-			notSkippable: 50,
+			skippable: 0,
+			notSkippable: 100,
 		},
 		defaultVariation: 'notSkippable',
 		allowExistingUsers: true,
@@ -152,6 +142,14 @@ export default {
 		},
 		defaultVariation: 'control',
 		allowExistingUsers: true,
-		//localeTargets: 'any',
+	},
+	showPlanUpsellNudge: {
+		datestamp: '20190712',
+		variations: {
+			variantShowNudge: 50,
+			control: 50,
+		},
+		defaultVariation: 'control',
+		allowExistingUsers: true,
 	},
 };
