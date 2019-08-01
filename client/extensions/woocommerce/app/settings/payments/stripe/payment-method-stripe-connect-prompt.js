@@ -11,7 +11,6 @@ import { localize } from 'i18n-calypso';
 /**
  * Internal dependencies
  */
-import ControlItem from 'components/segmented-control/item';
 import SegmentedControl from 'components/segmented-control';
 
 class StripeConnectPrompt extends Component {
@@ -21,18 +20,18 @@ class StripeConnectPrompt extends Component {
 		onSelectConnect: PropTypes.func.isRequired,
 	};
 
-	render = () => {
+	render() {
 		const { isCreateSelected, onSelectCreate, onSelectConnect, translate } = this.props;
 
 		return (
 			<div className="stripe__connect-prompt">
 				<SegmentedControl primary>
-					<ControlItem selected={ isCreateSelected } onClick={ onSelectCreate }>
+					<SegmentedControl.Item selected={ isCreateSelected } onClick={ onSelectCreate }>
 						{ translate( 'New Stripe account' ) }
-					</ControlItem>
-					<ControlItem selected={ ! isCreateSelected } onClick={ onSelectConnect }>
+					</SegmentedControl.Item>
+					<SegmentedControl.Item selected={ ! isCreateSelected } onClick={ onSelectConnect }>
 						{ translate( 'I already have a Stripe account' ) }
-					</ControlItem>
+					</SegmentedControl.Item>
 				</SegmentedControl>
 				<p>
 					{ translate(
@@ -42,7 +41,7 @@ class StripeConnectPrompt extends Component {
 				</p>
 			</div>
 		);
-	};
+	}
 }
 
 export default localize( StripeConnectPrompt );

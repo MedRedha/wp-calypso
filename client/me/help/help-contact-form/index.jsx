@@ -19,7 +19,6 @@ import { preventWidows } from 'lib/formatting';
 import config from 'config';
 import FormLabel from 'components/forms/form-label';
 import SegmentedControl from 'components/segmented-control';
-import ControlItem from 'components/segmented-control/item';
 import SelectDropdown from 'components/select-dropdown';
 import DropdownItem from 'components/select-dropdown/item';
 import FormTextarea from 'components/forms/form-textarea';
@@ -227,10 +226,10 @@ export class HelpContactForm extends React.PureComponent {
 			<div className="help-contact-form__selection">
 				<SegmentedControl primary>
 					{ options.map( option => (
-						<ControlItem { ...option.props }>
+						<SegmentedControl.Item { ...option.props }>
 							{ option.label }
 							{ option.subtext }
-						</ControlItem>
+						</SegmentedControl.Item>
 					) ) }
 				</SegmentedControl>
 				<SelectDropdown
