@@ -24,7 +24,6 @@ import {
 } from 'lib/cart-values/cart-items';
 
 // State actions and selectors
-import { SIGNUP_OPTIONAL_DEPENDENCY_SUGGESTED_USERNAME_SET } from 'state/action-types';
 import { getDesignType } from 'state/signup/steps/design-type/selectors';
 import { getSiteTitle } from 'state/signup/steps/site-title/selectors';
 import { getSurveyVertical, getSurveySiteType } from 'state/signup/steps/survey/selectors';
@@ -257,20 +256,6 @@ export function fetchSitesAndUser( siteSlug, onComplete, reduxStore ) {
 	] ).then( onComplete );
 }
 
-export function fetchUser( userInstance = user ) {
-	// @TODO: When user fetching is reduxified, let's get rid of this hack.
-	return new Promise( resolve => {
-		const userFetched = setInterval( () => {
-			const loadedUser = userInstance.get();
-			if ( loadedUser ) {
-				clearInterval( userFetched );
-				resolve( loadedUser );
-				return;
-			}
-		}, 333 );
-	} );
-}
-
 export function setThemeOnSite( callback, { siteSlug, themeSlugWithRepo } ) {
 	if ( isEmpty( themeSlugWithRepo ) ) {
 		defer( callback );
@@ -283,68 +268,6 @@ export function setThemeOnSite( callback, { siteSlug, themeSlugWithRepo } ) {
 		.changeTheme( siteSlug, { theme: themeSlugWithRepo.split( '/' )[ 1 ] }, function( errors ) {
 			callback( isEmpty( errors ) ? undefined : [ errors ] );
 		} );
-}
-
-/**
- * Gets username suggestions from the API.
- *
- * Ask the API to validate a username.
- *
- * If the API returns a suggestion, then the username is already taken.
- * If there is no error from the API, then the username is free.
- *
- * @param {string} username The username to get suggestions for.
- * @param {object} reduxState The Redux state object
- */
-export function getUsernameSuggestion( username, reduxState ) {
-	const fields = {
-		givesuggestions: 1,
-		username: username,
-	};
-
-	// Clear out the local storage variable before sending the call.
-	reduxState.dispatch( {
-		type: SIGNUP_OPTIONAL_DEPENDENCY_SUGGESTED_USERNAME_SET,
-		data: '',
-	} );
-
-	wpcom.undocumented().validateNewUser( fields, ( error, response ) => {
-		if ( error || ! response ) {
-			return null;
-		}
-
-		/**
-		 * Default the suggested username to `username` because if the validation succeeds would mean
-		 * that the username is free
-		 */
-		let resultingUsername = username;
-
-		/**
-		 * Only start checking for suggested username if the API returns an error for the validation.
-		 */
-		if ( ! response.success ) {
-			const { messages } = response;
-
-			/**
-			 * The only case we want to update username field is when the username is already taken.
-			 *
-			 * This ensures that the validation is done
-			 *
-			 * Check for:
-			 *    - username taken error -
-			 *    - a valid suggested username
-			 */
-			if ( messages.username && messages.username.taken && messages.suggested_username ) {
-				resultingUsername = messages.suggested_username.data;
-			}
-		}
-
-		// Save the suggested username for later use
-		reduxState.dispatch( {
-			type: SIGNUP_OPTIONAL_DEPENDENCY_SUGGESTED_USERNAME_SET,
-			data: resultingUsername,
-		} );
-	} );
 }
 
 export function addPlanToCart( callback, dependencies, stepProvidedItems, reduxStore ) {
@@ -536,19 +459,20 @@ export function createAccount(
 					);
 				}
 
-				// Fire after a new user registers.
-				analytics.recordRegistration();
-
-				// Try to fetch the user so we can track the newly-created account
-				fetchUser( user ).then( () => {
-					analytics.setUser( user );
-					analytics.identifyUser();
-				} );
-
 				const username =
 					( response && response.signup_sandbox_username ) ||
 					( response && response.username ) ||
 					userData.username;
+
+				const userId =
+					( response && response.signup_sandbox_user_id ) ||
+					( response && response.user_id ) ||
+					userData.ID;
+
+				// Fire after a new user registers.
+				analytics.recordRegistration( { flow: flowName } );
+				analytics.identifyUser( username, userId );
+
 				const providedDependencies = assign( { username }, bearerToken );
 
 				if ( oauth2Signup ) {

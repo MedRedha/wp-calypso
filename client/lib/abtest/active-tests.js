@@ -107,24 +107,6 @@ export default {
 		},
 		defaultVariation: 'siteType',
 	},
-	hideBloggerPlan2: {
-		datestamp: '20190627',
-		variations: {
-			hide: 50,
-			control: 50,
-		},
-		defaultVariation: 'control',
-		localeTargets: 'any',
-	},
-	proratedCreditsBanner: {
-		datestamp: '20190626',
-		variations: {
-			control: 50,
-			variant: 50,
-		},
-		defaultVariation: 'control',
-		allowExistingUsers: true,
-	},
 	skippableDomainStep: {
 		datestamp: '20190717',
 		variations: {
@@ -150,6 +132,15 @@ export default {
 			control: 50,
 		},
 		defaultVariation: 'control',
+		allowExistingUsers: true,
+	},
+	defaultMonthlyJetpackPlan: {
+		datestamp: '20190722',
+		variations: {
+			monthlyPlan: 50,
+			yearlyPlan: 50,
+		},
+		defaultVariation: 'yearlyPlan',
 		allowExistingUsers: true,
 	},
 };

@@ -5,17 +5,20 @@
  */
 import $ from 'jquery';
 import { filter, find, forEach, get, map, partialRight } from 'lodash';
-import { dispatch, select, subscribe } from '@wordpress/data';
+import { dispatch, select, subscribe, use } from '@wordpress/data';
 import { createBlock, parse, rawHandler } from '@wordpress/blocks';
 import { addFilter } from '@wordpress/hooks';
 import { addQueryArgs, getQueryArg } from '@wordpress/url';
 import { Component } from 'react';
 import tinymce from 'tinymce/tinymce';
+import debugFactory from 'debug';
 
 /**
  * Internal dependencies
  */
 import { inIframe, sendMessage } from './utils';
+
+const debug = debugFactory( 'wpcom-block-editor:iframe-bridge-server' );
 
 /**
  * Monitors Gutenberg for when an editor is opened with content originally authored in the classic editor.
@@ -92,10 +95,19 @@ function transmitDraftId( calypsoPort ) {
  * @param {MessagePort} calypsoPort Port used for communication with parent frame.
  */
 function handlePostTrash( calypsoPort ) {
-	$( '#editor' ).on( 'click', '.editor-post-trash', e => {
-		e.preventDefault();
-
-		calypsoPort.postMessage( { action: 'trashPost' } );
+	use( registry => {
+		return {
+			dispatch: namespace => {
+				const actions = { ...registry.dispatch( namespace ) };
+				if ( namespace === 'core/editor' && actions.trashPost ) {
+					actions.trashPost = () => {
+						debug( 'override core/editor trashPost action to use postlist trash' );
+						calypsoPort.postMessage( { action: 'trashPost' } );
+					};
+				}
+				return actions;
+			},
+		};
 	} );
 }
 
@@ -186,7 +198,7 @@ function handlePressThis( calypsoPort ) {
 				);
 			}
 
-			dispatch( 'core/editor' ).resetBlocks( blocks );
+			dispatch( 'core/editor' ).resetEditorBlocks( blocks );
 			dispatch( 'core/editor' ).editPost( { title: title } );
 		} );
 	}
@@ -524,12 +536,26 @@ function handleInsertClassicBlockMedia( calypsoPort ) {
 function handleCloseEditor( calypsoPort ) {
 	$( '#editor' ).on( 'click', '.edit-post-fullscreen-mode-close__toolbar a', e => {
 		e.preventDefault();
-		calypsoPort.postMessage( {
-			action: 'closeEditor',
-			payload: {
-				unsavedChanges: select( 'core/editor' ).isEditedPostDirty(),
+
+		const { port1, port2 } = new MessageChannel();
+		calypsoPort.postMessage(
+			{
+				action: 'closeEditor',
+				payload: {
+					unsavedChanges: select( 'core/editor' ).isEditedPostDirty(),
+				},
 			},
-		} );
+			[ port2 ]
+		);
+
+		// We only want to navigate back if the client tells us to.
+		// We need to give it a chance to set if the post is dirty
+		// before we can navigate away.
+		port1.onmessage = ( { data } ) => {
+			port1.close(); // We only want to recieve this once.
+			// data is the URL to which we go back:
+			window.open( data, '_top' );
+		};
 	} );
 }
 
@@ -561,7 +587,7 @@ function openLinksInParentFrame() {
 }
 
 /**
- * Ensures the Calypso Customizer is opened when clicking on the the FSE blocks' edit buttons.
+ * Ensures the Calypso Customizer is opened when clicking on the FSE blocks' edit buttons.
  *
  * @param {MessagePort} calypsoPort Port used for communication with parent frame.
  */
@@ -578,6 +604,89 @@ function openCustomizer( calypsoPort ) {
 			},
 		} );
 	} );
+}
+
+/**
+ * Ensures the Calypso block editor is opened when editing a template part.
+ *
+ * @param {MessagePort} calypsoPort Port used for communication with parent frame.
+ */
+async function openTemplatePartEditor( calypsoPort ) {
+	// We only want this when editing a full site page.
+	if ( ! window.fullSiteEditing || 'page' !== window.fullSiteEditing.editorPostType ) {
+		return;
+	}
+
+	const getTemplatePartLinks = async () =>
+		new Promise( resolve => {
+			const unsubscribe = subscribe( () => {
+				const currentPost = select( 'core/editor' ).getCurrentPost();
+				const initialized = currentPost && currentPost.id;
+
+				if ( ! initialized ) {
+					return;
+				}
+
+				unsubscribe();
+
+				const interval = setInterval( () => {
+					const links = document.querySelectorAll(
+						'[data-type="a8c/template"] .template-block__overlay a'
+					);
+					const blocks = select( 'core/editor' )
+						.getBlocks()
+						.filter( block => block.name === 'a8c/template' );
+
+					if ( links.length !== blocks.length ) {
+						return;
+					}
+
+					clearInterval( interval );
+					resolve( links );
+				} );
+			} );
+		} );
+
+	const editTemplatePartLinks = await getTemplatePartLinks();
+
+	editTemplatePartLinks.forEach( link => {
+		const templatePartId = parseInt( getQueryArg( link.getAttribute( 'href' ), 'post' ), 10 );
+
+		const { port1, port2 } = new MessageChannel();
+		calypsoPort.postMessage(
+			{
+				action: 'getTemplatePartEditorUrl',
+				payload: { templatePartId },
+			},
+			[ port2 ]
+		);
+		port1.onmessage = ( { data } ) => {
+			link.setAttribute( 'target', '_parent' );
+			link.setAttribute( 'href', data );
+		};
+	} );
+}
+
+/**
+ * Ensures the calypsoifyGutenberg close URL matches the one on the client.
+ * This is important because we modify the close URL client side in the
+ * context of template part blocks in FSE.
+ *
+ * @param {MessagePort} calypsoPort Port used for communication with parent frame.
+ */
+function getCloseButtonUrl( calypsoPort ) {
+	const { port1, port2 } = new MessageChannel();
+	calypsoPort.postMessage(
+		{
+			action: 'getCloseButtonUrl',
+			payload: {},
+		},
+		[ port2 ]
+	);
+	port1.onmessage = ( { data } ) => {
+		// data is the closeUrl:
+		calypsoifyGutenberg.closeUrl = data;
+	};
 }
 
 function initPort( message ) {
@@ -658,6 +767,10 @@ function initPort( message ) {
 		openLinksInParentFrame();
 
 		openCustomizer( calypsoPort );
+
+		openTemplatePartEditor( calypsoPort );
+
+		getCloseButtonUrl( calypsoPort );
 	}
 
 	window.removeEventListener( 'message', initPort, false );

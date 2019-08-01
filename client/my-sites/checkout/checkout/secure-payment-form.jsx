@@ -99,8 +99,7 @@ export class SecurePaymentForm extends Component {
 
 		if (
 			this.props.cart &&
-			this.props.cart.allowed_payment_methods.includes( 'WPCOM_Billing_Stripe_Payment_Method' ) &&
-			! isE2ETest()
+			this.props.cart.allowed_payment_methods.includes( 'WPCOM_Billing_Stripe_Payment_Method' )
 		) {
 			this.shouldUseStripeElements = true;
 		}

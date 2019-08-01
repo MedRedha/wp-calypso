@@ -287,26 +287,30 @@ validators.validStreetNumber = {
 
 /**
  * Runs payment fields through the relevant validation rules
- * use these validation rules, for example, in <CreditCardForm />, <PayPalPaymentBox /> and <RedirectPaymentBox />
+ *
+ * Use these validation rules, for example, in <CreditCardForm />,
+ * <PayPalPaymentBox /> and <RedirectPaymentBox />
+ *
+ * Returns an object with one property: `errors`. That object is another object
+ * with keys that are the field names of those errors.  The value of each
+ * property of that object is an array of error strings.
+ *
  * @param {object} paymentDetails object containing fieldname/value keypairs
  * @param {string} paymentType credit-card(default)|paypal|ideal|p24|tef|token|stripe
  * @returns {object} validation errors, if any
  */
 export function validatePaymentDetails( paymentDetails, paymentType = 'credit-card' ) {
-	const rules = paymentFieldRules( paymentDetails, paymentType );
-	let errors = [];
-	if ( rules ) {
-		errors = Object.keys( rules ).reduce( function( allErrors, fieldName ) {
-			const field = rules[ fieldName ],
-				newErrors = getErrors( field, paymentDetails[ fieldName ], paymentDetails );
+	const rules = paymentFieldRules( paymentDetails, paymentType ) || {};
+	const errors = Object.keys( rules ).reduce( function( allErrors, fieldName ) {
+		const field = rules[ fieldName ];
+		const newErrors = getErrors( field, paymentDetails[ fieldName ], paymentDetails );
 
-			if ( newErrors.length ) {
-				allErrors[ fieldName ] = newErrors;
-			}
+		if ( newErrors.length ) {
+			allErrors[ fieldName ] = newErrors;
+		}
 
-			return allErrors;
-		}, {} );
-	}
+		return allErrors;
+	}, {} );
 	return { errors };
 }
 

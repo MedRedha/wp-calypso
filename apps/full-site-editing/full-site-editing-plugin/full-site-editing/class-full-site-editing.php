@@ -163,6 +163,7 @@ class Full_Site_Editing {
 				'supports'              => array(
 					'title',
 					'editor',
+					'revisions',
 				),
 			)
 		);
@@ -299,6 +300,7 @@ class Full_Site_Editing {
 			array(
 				'editorPostType'          => get_current_screen()->post_type,
 				'featureFlags'            => $feature_flags->get_flags(),
+				'closeButtonLabel'        => $this->get_close_button_label(),
 				'closeButtonUrl'          => esc_url( $this->get_close_button_url() ),
 				'editTemplatePartBaseUrl' => esc_url( $this->get_edit_template_part_base_url() ),
 			)
@@ -323,16 +325,12 @@ class Full_Site_Editing {
 			'a8c/navigation-menu',
 			array(
 				'attributes'      => [
-					'themeLocation' => [
-						'default' => 'main-1',
-						'type'    => 'string',
-					],
-					'className'     => [
+					'className' => [
 						'default' => '',
 						'type'    => 'string',
 					],
 				],
-				'render_callback' => 'render_navigation_menu_block',
+				'render_callback' => 'a8c_fse_render_navigation_menu_block',
 			)
 		);
 
@@ -401,6 +399,51 @@ class Full_Site_Editing {
 	}
 
 	/**
+	 * Returns the parent post ID if sent as query param when editing a Template Part from a
+	 * Post/Page or a Template.
+	 *
+	 * @return null|string The parent post ID, or null if not set.
+	 */
+	public function get_parent_post_id() {
+		// phpcs:disable WordPress.Security.NonceVerification.NoNonceVerification
+		if ( ! isset( $_GET['fse_parent_post'] ) ) {
+			return null;
+		}
+
+		$parent_post_id = absint( $_GET['fse_parent_post'] );
+		// phpcs:enable WordPress.Security.NonceVerification.NoNonceVerification
+
+		if ( empty( $parent_post_id ) ) {
+			return null;
+		}
+
+		return $parent_post_id;
+	}
+
+	/**
+	 * Returns the label for the Gutenberg close button.
+	 *
+	 * When we edit a Template Part from a Post/Page or a Template, we want to replace the close
+	 * icon with a "Back to" button, to clarify that it will take us back to the previous editing
+	 * view, and not the Template Part CPT list.
+	 *
+	 * @return null|string Override label string if it should be inserted, or null otherwise.
+	 */
+	public function get_close_button_label() {
+		$parent_post_id = $this->get_parent_post_id();
+
+		if ( ! $parent_post_id ) {
+			return null;
+		}
+
+		$parent_post_type        = get_post_type( $parent_post_id );
+		$parent_post_type_object = get_post_type_object( $parent_post_type );
+
+		/* translators: %s: "Back to Post", "Back to Page", "Back to Template", etc. */
+		return sprintf( __( 'Back to %s', 'full-site-editing' ), $parent_post_type_object->labels->singular_name );
+	}
+
+	/**
 	 * Returns the URL for the Gutenberg close button.
 	 *
 	 * In some cases we want to override the default value which would take us to post listing
@@ -410,15 +453,9 @@ class Full_Site_Editing {
 	 * @return null|string Override URL string if it should be inserted, or null otherwise.
 	 */
 	public function get_close_button_url() {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended
-		if ( ! isset( $_GET['fse_parent_post'] ) ) {
-			return null;
-		}
+		$parent_post_id = $this->get_parent_post_id();
 
-		$parent_post_id = absint( $_GET['fse_parent_post'] );
-		// phpcs:enable WordPress.Security.NonceVerification.Recommended
-
-		if ( empty( $parent_post_id ) ) {
+		if ( ! $parent_post_id ) {
 			return null;
 		}
 
@@ -478,25 +515,7 @@ class Full_Site_Editing {
 			return;
 		}
 
-		$template_blocks = parse_blocks( $template_content );
-		$content_attrs   = $this->get_post_content_block_attrs( $template_blocks );
-
-		$wrapped_post_content = sprintf( '<!-- wp:a8c/post-content %s -->%s<!-- /wp:a8c/post-content -->', $content_attrs, $post->post_content );
-		$post->post_content   = str_replace( "<!-- wp:a8c/post-content $content_attrs /-->", $wrapped_post_content, $template_content );
-	}
-
-	/**
-	 * This will extract the attributes from the post content block
-	 * json encode them.
-	 *
-	 * @param array $blocks    An array of template blocks.
-	 */
-	private function get_post_content_block_attrs( $blocks ) {
-		foreach ( $blocks as $key => $value ) {
-			if ( 'a8c/post-content' === $value['blockName'] ) {
-				return count( $value['attrs'] ) > 0 ? wp_json_encode( $value['attrs'] ) : '';
-			}
-		}
+		$post->post_content = preg_replace( '@(<!-- wp:a8c/post-content)(.*?)(/-->)@', "$1$2-->$post->post_content<!-- /wp:a8c/post-content -->", $template_content );
 	}
 
 	/**
