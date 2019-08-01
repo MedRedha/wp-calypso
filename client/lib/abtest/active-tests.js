@@ -144,10 +144,10 @@ export default {
 		defaultVariation: 'notSkippable',
 		allowExistingUsers: true,
 	},
-	checkoutGuarantee: {
+	checkoutSealsCopyBundle: {
 		datestamp: '20190613',
 		variations: {
-			variantShowGuarantee: 50,
+			variant: 50,
 			control: 50,
 		},
 		defaultVariation: 'control',

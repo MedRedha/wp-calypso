@@ -30,7 +30,11 @@ import {
 	getLocationOrigin,
 	isPaymentMethodEnabled,
 } from 'lib/cart-values';
-import { hasFreeTrial, getDomainRegistrations } from 'lib/cart-values/cart-items';
+import {
+	hasFreeTrial,
+	getDomainRegistrations,
+	hasOnlyDomainProducts,
+} from 'lib/cart-values/cart-items';
 import PaymentBox from './payment-box';
 import isPresalesChatAvailable from 'state/happychat/selectors/is-presales-chat-available';
 import getCountries from 'state/selectors/get-countries';
@@ -39,7 +43,6 @@ import { INPUT_VALIDATION, REDIRECTING_FOR_AUTHORIZATION } from 'lib/store-trans
 import { getTld } from 'lib/domains';
 import { displayError, clear } from 'lib/upgrades/notices';
 import { removeNestedProperties } from 'lib/cart/store/cart-analytics';
-import { hasOnlyDomainProducts } from 'lib/cart-values/cart-items';
 import { abtest } from 'lib/abtest';
 
 /**
@@ -543,19 +546,28 @@ export class SecurePaymentForm extends Component {
 
 	renderGreatChoiceHeader() {
 		const { translate } = this.props;
-		const headerText = translate( 'Great choice! How would you like to pay?' );
 
-		this.props.setHeaderText( headerText );
+		if ( 'variant' === abtest( 'checkoutSealsCopyBundle' ) ) {
+			const headerText = translate( 'Confirm Your Order' );
+			const subHeaderText = translate(
+				'Review your order and proceed with a payment method to finish'
+			);
+
+			this.props.setHeaderText( headerText, subHeaderText );
+		} else {
+			const headerText = translate( 'Great choice! How would you like to pay?' );
+			this.props.setHeaderText( headerText );
+		}
 	}
 
 	render() {
 		const visiblePaymentBox = this.getVisiblePaymentBox( this.props ),
-			moneyBackGuarantee =
+			moneyBackGuaranteeSeal =
 				! hasOnlyDomainProducts( this.props.cart ) &&
-				'variantShowGuarantee' === abtest( 'checkoutGuarantee' ) &&
+				'variant' === abtest( 'checkoutSealsCopyBundle' ) &&
 				indexOf( [ 'credits', 'free-trial', 'free-cart' ], visiblePaymentBox ) === -1;
 
-		this.props.showGuaranteeSeal( moneyBackGuarantee );
+		this.props.showGuaranteeSeal( moneyBackGuaranteeSeal );
 		if ( visiblePaymentBox === null ) {
 			debug( 'empty content' );
 			return (

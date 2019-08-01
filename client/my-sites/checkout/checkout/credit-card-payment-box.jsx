@@ -32,6 +32,7 @@ import RecentRenewals from './recent-renewals';
 import CheckoutTerms from './checkout-terms';
 import { hasDomainRegistration, hasOnlyDomainProducts } from 'lib/cart-values/cart-items';
 import { abtest } from 'lib/abtest';
+import classNames from 'classnames';
 
 export class CreditCardPaymentBox extends React.Component {
 	static propTypes = {
@@ -137,9 +138,14 @@ export class CreditCardPaymentBox extends React.Component {
 				overSome( isWpComBusinessPlan, isWpComEcommercePlan )( product_slug )
 			),
 			showPaymentChatButton = presaleChatAvailable && hasBusinessPlanInCart,
-			paymentButtonClasses = 'payment-box__payment-buttons',
-			moneyBackGuarantee =
-				! hasOnlyDomainProducts( cart ) && 'variantShowGuarantee' === abtest( 'checkoutGuarantee' );
+			testSealsCopy = 'variant' === abtest( 'checkoutSealsCopyBundle' ),
+			paymentButtonClasses = classNames( 'payment-box__payment-buttons', {
+				'payment-box__payment-buttons-variant': testSealsCopy,
+			} ),
+			moneyBackGuarantee = ! hasOnlyDomainProducts( cart ) && testSealsCopy,
+			secureText = testSealsCopy
+				? translate( 'This is a secure 128-SSL encrypted connection' )
+				: translate( 'Secure Payment' );
 
 		return (
 			<div className={ paymentButtonClasses }>
@@ -159,7 +165,7 @@ export class CreditCardPaymentBox extends React.Component {
 					) }
 					<div className="checkout__secure-payment-content">
 						<Gridicon icon="lock" />
-						{ translate( 'Secure Payment' ) }
+						{ secureText }
 					</div>
 				</div>
 
