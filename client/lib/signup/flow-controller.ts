@@ -1,9 +1,7 @@
-/** @format */
 /**
  * External dependencies
  */
 import {
-	assign,
 	defer,
 	difference,
 	filter,
@@ -18,16 +16,18 @@ import {
 	reject,
 } from 'lodash';
 import page from 'page';
+import { Store, Unsubscribe as ReduxUnsubscribe } from 'redux';
 
 /**
  * Internal dependencies
  */
 import analytics from 'lib/analytics';
 import flows from 'signup/config/flows';
-import steps from 'signup/config/steps';
+import untypedSteps from 'signup/config/steps';
 import wpcom from 'lib/wp';
 import { getStepUrl } from 'signup/utils';
 import { isUserLoggedIn } from 'state/current-user/selectors';
+import { ProgressState } from 'state/signup/progress/schema';
 import { getSignupProgress } from 'state/signup/progress/selectors';
 import { getSignupDependencyStore } from 'state/signup/dependency-store/selectors';
 import { resetSignup, updateDependencies } from 'state/signup/actions';
@@ -38,7 +38,10 @@ import {
 	removeUnneededSteps,
 } from 'state/signup/progress/actions';
 
-function progressStoreListener( reduxStore, callback ) {
+function progressStoreListener(
+	reduxStore: Store,
+	callback: ( nextState: ProgressState ) => void
+) {
 	let prevState = getSignupProgress( reduxStore.getState() );
 	return () => {
 		const nextState = getSignupProgress( reduxStore.getState() );
@@ -49,65 +52,104 @@ function progressStoreListener( reduxStore, callback ) {
 	};
 }
 
-function SignupFlowController( options ) {
-	if ( ! ( this instanceof SignupFlowController ) ) {
-		return new SignupFlowController( options );
-	}
-
-	this._onComplete = options.onComplete;
-	this._processingSteps = new Set();
-
-	this._reduxStore = options.reduxStore;
-
-	this.changeFlowName( options.flowName );
-
-	try {
-		this._assertFlowHasValidDependencies();
-	} catch ( ex ) {
-		if ( this._flowName !== flows.defaultFlowName ) {
-			// redirect to the default signup flow, hopefully it will be valid
-			page( getStepUrl() );
-			return;
-		}
-		throw ex;
-	}
-
-	this._unsubscribeStore = this._reduxStore.subscribe(
-		progressStoreListener( this._reduxStore, this._process.bind( this ) )
-	);
-
-	this._resetStoresIfProcessing(); // reset the stores if the cached progress contained a processing step
-	this._resetStoresIfUserHasLoggedIn(); // reset the stores if user has newly authenticated
-
-	if ( this._flow.providesDependenciesInQuery ) {
-		this._assertFlowProvidedDependenciesFromConfig( options.providedDependencies );
-		this._reduxStore.dispatch( updateDependencies( options.providedDependencies ) );
-	} else {
-		// TODO: synces deps from progress to dep store: are they ever out of sync?
-		const storedDependencies = this._getStoredDependencies();
-		if ( ! isEmpty( storedDependencies ) ) {
-			this._reduxStore.dispatch( updateDependencies( storedDependencies ) );
-		}
-	}
+interface Dependencies {
+	[other: string]: any;
 }
 
-assign( SignupFlowController.prototype, {
-	_resetStoresIfProcessing: function() {
+interface Flow {
+	destination: string | ( ( dependencies: Dependencies ) => string );
+	providesDependenciesInQuery?: string[];
+	steps: string[];
+}
+
+interface Step {
+	apiRequestFunction?: (
+		callback: ( errors: any, providedDependencies: Dependencies ) => void,
+		dependenciesFound: Dependencies,
+		step: Step,
+		reduxStore: Store
+	) => void;
+	delayApiRequestUntilComplete?: boolean;
+	dependencies?: string[];
+	providedDependencies?: string[];
+	providesDependencies?: string[];
+	providesToken?: boolean;
+	stepName: string;
+}
+
+const steps: Record< string, Step > = untypedSteps;
+
+type OnCompleteCallback = ( dependencies: Dependencies, destination: string ) => void;
+
+interface SignupFlowControllerOptions {
+	flowName: string;
+	providedDependencies: Dependencies;
+	reduxStore: Store;
+	onComplete: OnCompleteCallback;
+}
+
+export default class SignupFlowController {
+	_flow: Flow;
+	_flowName: string;
+	_onComplete: OnCompleteCallback;
+	_processingSteps = new Set< string >();
+	_reduxStore: Store;
+	_unsubscribeStore?: ReduxUnsubscribe;
+
+	constructor( options: SignupFlowControllerOptions ) {
+		this._onComplete = options.onComplete;
+		this._reduxStore = options.reduxStore;
+		this._flowName = options.flowName;
+		this._flow = flows.getFlow( options.flowName );
+
+		this._reduxStore.dispatch( removeUnneededSteps( this._flowName ) );
+
+		try {
+			this._assertFlowHasValidDependencies();
+		} catch ( ex ) {
+			if ( this._flowName !== flows.defaultFlowName ) {
+				// redirect to the default signup flow, hopefully it will be valid
+				page( getStepUrl() );
+				return;
+			}
+			throw ex;
+		}
+
+		this._unsubscribeStore = this._reduxStore.subscribe(
+			progressStoreListener( this._reduxStore, this._process.bind( this ) )
+		);
+
+		this._resetStoresIfProcessing(); // reset the stores if the cached progress contained a processing step
+		this._resetStoresIfUserHasLoggedIn(); // reset the stores if user has newly authenticated
+
+		if ( this._flow.providesDependenciesInQuery ) {
+			this._assertFlowProvidedDependenciesFromConfig( options.providedDependencies );
+			this._reduxStore.dispatch( updateDependencies( options.providedDependencies ) );
+		} else {
+			// TODO: synces deps from progress to dep store: are they ever out of sync?
+			const storedDependencies = this._getStoredDependencies();
+			if ( ! isEmpty( storedDependencies ) ) {
+				this._reduxStore.dispatch( updateDependencies( storedDependencies ) );
+			}
+		}
+	}
+
+	_resetStoresIfProcessing() {
 		if ( find( getSignupProgress( this._reduxStore.getState() ), { status: 'processing' } ) ) {
 			this.reset();
 		}
-	},
+	}
 
-	_resetStoresIfUserHasLoggedIn: function() {
+	_resetStoresIfUserHasLoggedIn() {
 		if (
 			isUserLoggedIn( this._reduxStore.getState() ) &&
 			find( getSignupProgress( this._reduxStore.getState() ), { stepName: 'user' } )
 		) {
 			this.reset();
 		}
-	},
+	}
 
-	_assertFlowProvidedDependenciesFromConfig: function( providedDependencies ) {
+	_assertFlowProvidedDependenciesFromConfig( providedDependencies: Dependencies ) {
 		const dependencyDiff = difference(
 			this._flow.providesDependenciesInQuery,
 			keys( providedDependencies )
@@ -120,9 +162,9 @@ assign( SignupFlowController.prototype, {
 					'] it is configured to.'
 			);
 		}
-	},
+	}
 
-	_assertFlowHasValidDependencies: function() {
+	_assertFlowHasValidDependencies() {
 		forEach( pick( steps, this._flow.steps ), step => {
 			if ( ! step.dependencies ) {
 				return;
@@ -150,9 +192,9 @@ assign( SignupFlowController.prototype, {
 				);
 			}
 		} );
-	},
+	}
 
-	_assertFlowProvidedRequiredDependencies: function() {
+	_assertFlowProvidedRequiredDependencies() {
 		const storedDependencies = keys( getSignupDependencyStore( this._reduxStore.getState() ) );
 
 		forEach( pick( steps, this._flow.steps ), step => {
@@ -174,24 +216,24 @@ assign( SignupFlowController.prototype, {
 				);
 			}
 		} );
-	},
+	}
 
-	_canMakeAuthenticatedRequests: function() {
+	_canMakeAuthenticatedRequests() {
 		return wpcom.isTokenLoaded() || isUserLoggedIn( this._reduxStore.getState() );
-	},
+	}
 
 	/**
 	 * Returns a list of the dependencies provided in the flow configuration.
 	 *
 	 * @return {array} a list of dependency names
 	 */
-	_getFlowProvidesDependencies: function() {
+	_getFlowProvidesDependencies() {
 		return flatMap( this._flow.steps, stepName =>
 			get( steps, [ stepName, 'providesDependencies' ], [] )
 		).concat( this._flow.providesDependenciesInQuery );
-	},
+	}
 
-	_process: function() {
+	_process() {
 		const currentSteps = this._flow.steps;
 		const signupProgress = filter( getSignupProgress( this._reduxStore.getState() ), step =>
 			includes( currentSteps, step.stepName )
@@ -214,9 +256,9 @@ assign( SignupFlowController.prototype, {
 			// emitted their final change events.
 			defer( () => this._onComplete( dependencies, this._destination( dependencies ) ) );
 		}
-	},
+	}
 
-	_canProcessStep: function( step ) {
+	_canProcessStep( step: Step ) {
 		const { providesToken } = steps[ step.stepName ];
 		const dependencies = get( steps, [ step.stepName, 'dependencies' ], [] );
 		const dependenciesFound = pick(
@@ -237,9 +279,9 @@ assign( SignupFlowController.prototype, {
 			( providesToken || this._canMakeAuthenticatedRequests() ) &&
 			( ! steps[ step.stepName ].delayApiRequestUntilComplete || allStepsSubmitted )
 		);
-	},
+	}
 
-	_processStep: function( step ) {
+	_processStep( step: Step ) {
 		if ( this._processingSteps.has( step.stepName ) || ! this._canProcessStep( step ) ) {
 			return;
 		}
@@ -258,6 +300,10 @@ assign( SignupFlowController.prototype, {
 		} );
 
 		const apiFunction = steps[ step.stepName ].apiRequestFunction;
+		if ( ! apiFunction ) {
+			return;
+		}
+
 		apiFunction(
 			( errors, providedDependencies ) => {
 				this._processingSteps.delete( step.stepName );
@@ -275,15 +321,15 @@ assign( SignupFlowController.prototype, {
 			step,
 			this._reduxStore
 		);
-	},
+	}
 
-	_destination: function( dependencies ) {
+	_destination( dependencies: Dependencies ): string {
 		if ( typeof this._flow.destination === 'function' ) {
 			return this._flow.destination( dependencies );
 		}
 
 		return this._flow.destination;
-	},
+	}
 
 	_getStoredDependencies() {
 		const requiredDependencies = flatMap( this._flow.steps, stepName =>
@@ -297,21 +343,13 @@ assign( SignupFlowController.prototype, {
 			} ),
 			{}
 		);
-	},
+	}
 
 	reset() {
 		this._reduxStore.dispatch( resetSignup() );
-	},
+	}
 
 	cleanup() {
 		this._unsubscribeStore && this._unsubscribeStore();
-	},
-
-	changeFlowName( flowName ) {
-		this._flowName = flowName;
-		this._flow = flows.getFlow( flowName );
-		this._reduxStore.dispatch( removeUnneededSteps( this._flowName ) );
-	},
-} );
-
-export default SignupFlowController;
+	}
+}
